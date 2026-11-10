@@ -1,0 +1,28 @@
+application: 
+  name: Seven
+
+  version: 0.1.0-alpha
+  
+  language: en
+  
+  theme: light
+  
+  startup: true
+
+voice: 
+
+  enabled: true
+  
+  wake_word: "Hey Seven"
+
+brain:
+
+  provider: openai
+
+memory:
+
+  enabled: true
+
+logging: 
+
+level: INFO
