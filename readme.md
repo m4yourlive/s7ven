@@ -1,8 +1,7 @@
-<<<<<<< HEAD
 # Seven — Personal Autonomous AI Companion
 <img width="1168" height="784" alt="S7VEN BANNER" src="https://github.com/user-attachments/assets/aec062ac-2670-44b0-9267-5baf550379ac" />
 
-# SEVEN
+# SEVEN V0.1.0 Alpha
 
 ### *The Personal AI Companion That Grows With You.*
 
