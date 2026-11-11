@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .venv/
 .env
 
@@ -18,4 +19,26 @@ build/
 
 .pytest_cache/
 
+=======
+.venv/
+.env
+
+__pychache/__
+*.pyc
+
+logs/*
+!logs/.gitkeep
+
+.vscode/
+
+.idea/
+
+dist/
+build/
+
+*.db
+
+.pytest_cache/
+
+>>>>>>> de44d60 (- config manager)
 .coverage

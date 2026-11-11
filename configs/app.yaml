@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 application: 
   name: Seven
 
@@ -26,3 +27,32 @@ memory:
 logging: 
 
 level: INFO
+=======
+
+app:
+  name: Seven
+  version: "0.1.0a0"
+  environment: development
+
+runtime:
+  debug: true
+  log_level: INFO
+  auto_start: false
+  minimize_to_tray: true
+
+storage:
+  data_directory: data
+  database_name: seven.db
+
+ai:
+  provider: openai
+  model: gpt-4o-mini
+  api_base_url: null
+  request_timeout: 60
+
+voice:
+  enabled: false
+  input_enabled: true
+  output_enabled: true
+  speech_rate: 175
+>>>>>>> de44d60 (- config manager)

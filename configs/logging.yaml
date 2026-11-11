@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 logging:
   level: DEBUG
@@ -16,4 +17,24 @@ logging:
   diagnostics:
     backtrace: false
     diagnose: false
+=======
+
+logging:
+  level: DEBUG
+
+  console:
+    enabled: true
+
+  file:
+    enabled: true
+    filename: seven.log
+    rotation: 10 MB
+    retention: 14 days
+    compression: zip
+    serialize: true
+
+  diagnostics:
+    backtrace: false
+    diagnose: false
+>>>>>>> de44d60 (- config manager)
   
