@@ -1,44 +1,3 @@
-<<<<<<< HEAD
-[PROJECT]
-name = "seven"
-version = "0.1.0-alpha"
-description = "Seven Personal AI Companion"
-readme = "readme.md"
-requires-python = ">=3.12"
-
-authors = [
-    {name = "Trent"}
-]
-
-dependencies = [
-    "PySide6>=6.8.0",
-    "httpx>=0.28.0",
-    "openai>=1.99.0",
-    "python-dotenv>=1.1.0",
-    "pydantic>=2.11.0",
-    "PyYAML>=6.0.2",
-    "loguru>=0.7.3",
-    "SQLAlchemy>=2.0.43",
-    "chromadb>=1.0.15",
-]
-
-[project.optional-dependencies]
-
-dev = [
-    "pytest",
-    "ruff",
-    "black",
-    "mypy",
-]
-
-[tool.black]
-line-length = 88
-
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = ["setuptools.build-meta"]
-
-=======
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]
@@ -86,6 +45,9 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"
 
 [tool.ruff]
 line-length = 88
@@ -93,4 +55,3 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
->>>>>>> de44d60 (- config manager)

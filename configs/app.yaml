@@ -1,33 +1,3 @@
-<<<<<<< HEAD
-application: 
-  name: Seven
-
-  version: 0.1.0-alpha
-  
-  language: en
-  
-  theme: light
-  
-  startup: true
-
-voice: 
-
-  enabled: true
-  
-  wake_word: "Hey Seven"
-
-brain:
-
-  provider: openai
-
-memory:
-
-  enabled: true
-
-logging: 
-
-level: INFO
-=======
 
 app:
   name: Seven
@@ -55,4 +25,3 @@ voice:
   input_enabled: true
   output_enabled: true
   speech_rate: 175
->>>>>>> de44d60 (- config manager)

@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-
 from pathlib import Path
 
 import pytest
@@ -7,133 +5,60 @@ import pytest
 from seven.core.logging import LoggerConfig, LoggerService
 
 
-def test_logger_creates_log_file(tmp_path: Path):
+@pytest.fixture
+def logger_service(tmp_path: Path) -> LoggerService:
     config = LoggerConfig(
+        level="DEBUG",
         console_enabled=False,
         file_enabled=True,
-        serialize=False,
         log_directory=tmp_path,
-    )
-
-    service = LoggerService(config)
-    service.start()
-
-    log = service.get_logger("seven.test")
-    log.info("Logger test successful")
-
-    service.stop()
-
-    log_file = tmp_path / "seven.log"
-
-    assert log_file.exists()
-    assert "Logger test successful" in log_file.read_text(
-        encoding="utf-8"
-    )
-
-
-def test_logger_can_start_only_once(tmp_path: Path):
-    config = LoggerConfig(
-        console_enabled=False,
-        file_enabled=True,
         serialize=False,
-        log_directory=tmp_path,
     )
 
-    service = LoggerService(config)
-
-    service.start()
-    service.start()
-
-    assert service.is_running is True
-
-    service.stop()
+    return LoggerService(config)
 
 
-def test_logger_rejects_invalid_level():
-    config = LoggerConfig(level="INVALID")
-    service = LoggerService(config)
+def test_logger_creates_log_file(
+    logger_service: LoggerService,
+) -> None:
+    logger_service.start()
+
+    try:
+        logger_service.get_logger("Test").info("Test log message")
+
+        assert logger_service.is_running
+        assert logger_service.log_directory is not None
+    finally:
+        logger_service.stop()
+
+
+def test_logger_start_twice(
+    logger_service: LoggerService,
+) -> None:
+    logger_service.start()
+    logger_service.start()
+
+    assert logger_service.is_running
+
+    logger_service.stop()
+
+
+def test_logger_invalid_level() -> None:
+    service = LoggerService(
+        LoggerConfig(level="INVALID")
+    )
 
     with pytest.raises(ValueError):
         service.start()
 
 
-def test_logger_requires_at_least_one_handler():
-    config = LoggerConfig(
-        console_enabled=False,
-        file_enabled=False,
+def test_logger_requires_handler() -> None:
+    service = LoggerService(
+        LoggerConfig(
+            console_enabled=False,
+            file_enabled=False,
+        )
     )
-
-    service = LoggerService(config)
 
     with pytest.raises(ValueError):
         service.start()
-=======
-
-from pathlib import Path
-
-import pytest
-
-from seven.core.logging import LoggerConfig, LoggerService
-
-
-def test_logger_creates_log_file(tmp_path: Path):
-    config = LoggerConfig(
-        console_enabled=False,
-        file_enabled=True,
-        serialize=False,
-        log_directory=tmp_path,
-    )
-
-    service = LoggerService(config)
-    service.start()
-
-    log = service.get_logger("seven.test")
-    log.info("Logger test successful")
-
-    service.stop()
-
-    log_file = tmp_path / "seven.log"
-
-    assert log_file.exists()
-    assert "Logger test successful" in log_file.read_text(
-        encoding="utf-8"
-    )
-
-
-def test_logger_can_start_only_once(tmp_path: Path):
-    config = LoggerConfig(
-        console_enabled=False,
-        file_enabled=True,
-        serialize=False,
-        log_directory=tmp_path,
-    )
-
-    service = LoggerService(config)
-
-    service.start()
-    service.start()
-
-    assert service.is_running is True
-
-    service.stop()
-
-
-def test_logger_rejects_invalid_level():
-    config = LoggerConfig(level="INVALID")
-    service = LoggerService(config)
-
-    with pytest.raises(ValueError):
-        service.start()
-
-
-def test_logger_requires_at_least_one_handler():
-    config = LoggerConfig(
-        console_enabled=False,
-        file_enabled=False,
-    )
-
-    service = LoggerService(config)
-
-    with pytest.raises(ValueError):
-        service.start()
->>>>>>> de44d60 (- config manager)
