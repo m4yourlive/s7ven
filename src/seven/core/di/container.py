@@ -1,10 +1,12 @@
+
 from pathlib import Path
 
 from dependency_injector import containers, providers
 
 from seven.core.config import AppConfig, ConfigurationManager
+from seven.core.events import EventBus
 from seven.core.logging import LoggerConfig, LoggerService
-
+from seven.core.runtime import RuntimeManager
 
 def create_logger_config(
     config_manager: ConfigurationManager,
@@ -15,10 +17,13 @@ def create_logger_config(
         level=config.runtime.log_level,
     )
 
+def create_event_logger(logger_service: LoggerService):
+    return logger_service.get_logger("EventBus")
 
 class SevenContainer(containers.DeclarativeContainer):
     """Central dependency injection container for Seven."""
 
+    # Configuration Manager
     config_manager = providers.Singleton(
         ConfigurationManager,
         config_path=Path("configs/app.yaml"),
@@ -26,6 +31,7 @@ class SevenContainer(containers.DeclarativeContainer):
         dotenv_path=Path(".env"),
     )
 
+    # Logger Service
     logger_service = providers.Singleton(
         LoggerService,
         config=providers.Callable(
@@ -34,35 +40,33 @@ class SevenContainer(containers.DeclarativeContainer):
         ),
     )
 
-
-def initialize_container(container: SevenContainer) -> None:
-    """Initialize Seven core services."""
-
-    config_manager = container.config_manager()
-    config_manager.load()
-
-    logger_service = container.logger_service()
-    logger_service.start()
-
-    logger_service.get_logger("DIContainer").info(
-        "Seven dependency container initialized"
+    # Event Bus
+    event_bus = providers.Singleton(
+        EventBus,
+        logger=providers.Callable(
+            create_event_logger,
+            logger_service,
+        ),
     )
 
+    # Runtime Manager
+    runtime_manager = providers.Singleton(
+        RuntimeManager,
+        config_manager=config_manager,
+        logger_service_provider=providers.Delegate(
+            logger_service
+        ),
+        event_bus_provider=providers.Delegate(
+            event_bus
+        ),
+    )
 
+def initialize_container(container: SevenContainer) -> None:
+    """Start Seven through Runtime Manager."""
+
+    container.runtime_manager().start()
 
 def shutdown_container(container: SevenContainer) -> None:
-    """Gracefully shut down Seven core services."""
+    """Stop Seven through Runtime Manager."""
 
-    # Jangan membuat Logger jika konfigurasi gagal dimuat.
-    config_manager = container.config_manager()
-
-    if not config_manager.is_loaded:
-        return
-
-    logger_service = container.logger_service()
-
-    if logger_service.is_running:
-        logger_service.get_logger("DIContainer").info(
-            "Shutting down Seven dependency container"
-        )
-        logger_service.stop()
+    container.runtime_manager().stop()

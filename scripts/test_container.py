@@ -1,4 +1,3 @@
-
 from seven.core.di import (
     SevenContainer,
     initialize_container,
@@ -7,43 +6,55 @@ from seven.core.di import (
 
 from seven.core.config import ConfigurationManager
 from seven.core.logging import LoggerService
-
+from seven.core.events import EventBus
+from seven.core.runtime import RuntimeManager, RuntimeState
 
 def main() -> None:
     container = SevenContainer()
 
     try:
-        print("Initializing Seven DI Container...")
+        print("Initializing Seven...")
 
         initialize_container(container)
 
         config = container.config_manager()
         logger = container.logger_service()
+        event_bus = container.event_bus()
+        runtime = container.runtime_manager()
 
-        # Check service instances
         assert isinstance(config, ConfigurationManager)
         assert isinstance(logger, LoggerService)
+        assert isinstance(event_bus, EventBus)
+        assert isinstance(runtime, RuntimeManager)
 
-        # Check singleton behavior
+        # Singleton checks
         assert config is container.config_manager()
         assert logger is container.logger_service()
+        assert event_bus is container.event_bus()
+        assert runtime is container.runtime_manager()
 
-        print("\nSEVEN DI CONTAINER TEST")
-        print("-----------------------")
+        # Runtime check
+        assert runtime.state == RuntimeState.RUNNING
+        assert logger.is_running
+
+        print("\nSEVEN RUNTIME TEST")
+        print("------------------")
         print("Configuration Manager: OK")
         print("Logger Service: OK")
-        print("Singleton Config: OK")
-        print("Singleton Logger: OK")
-        print("Configuration:", config.config.app.name)
-        print("Logger Running:", logger.is_running)
+        print("Event Bus: OK")
+        print("Runtime Manager: OK")
+        print("Singleton Services: OK")
+        print("Runtime State:", runtime.state.value)
 
         logger.get_logger("Test").success(
-            "Dependency Injection Container works!"
+            "Seven runtime initialized successfully!"
         )
 
     finally:
         shutdown_container(container)
 
+    assert runtime.state == RuntimeState.STOPPED
+    print("Runtime Shutdown: OK")
 
 if __name__ == "__main__":
     main()

@@ -16,5 +16,8 @@ src/seven/core/config/config_schema.py
 src/seven/core/config/exceptions.py
 src/seven/core/di/__init__.py
 src/seven/core/di/container.py
+src/seven/core/events/__init__.py
+src/seven/core/events/event.py
+src/seven/core/events/event_bus.py
 src/seven/core/logging/__init__.py
 src/seven/core/logging/logger_service.py
