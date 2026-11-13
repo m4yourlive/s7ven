@@ -1,16 +1,133 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#ffffff">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <meta
+        name="theme-color"
+        content="#ffffff"
+    >
+    <meta
+        name="description"
+        content="S7VEN - Your private AI companion."
+    >
+
     <title>S7VEN</title>
+
+    <link
+        rel="stylesheet"
+        href="assets/css/style.css"
+    >
 </head>
+
 <body>
-    <main id="app">
-        <h1>S7VEN</h1>
-        <p>Initializing application...</p>
-    </main>
+    <div class="app-container">
+
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="brand-name">S7VEN<span>.</span></span>
+                <span class="brand-version">PERSONAL AI SYSTEM</span>
+            </div>
+
+            <nav class="navigation">
+                <a href="#" class="nav-item active">
+                    <span class="nav-indicator"></span>
+                    <span>NEW SESSION</span>
+                </a>
+
+                <a href="#" class="nav-item">
+                    <span class="nav-indicator"></span>
+                    <span>CONVERSATIONS</span>
+                </a>
+
+                <a href="#" class="nav-item">
+                    <span class="nav-indicator"></span>
+                    <span>MEMORY</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="system-status">
+                    <span class="status-indicator"></span>
+                    <span>SYSTEM INITIALIZING</span>
+                </div>
+
+                <span class="sidebar-version">S7VEN BUILD 001</span>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="topbar-label">
+                    <span class="topbar-overline">WORKSPACE</span>
+                    <span class="topbar-title">PERSONAL ASSISTANT</span>
+                </div>
+
+                <button
+                    class="profile-button"
+                    type="button"
+                    aria-label="User profile"
+                >
+                    U
+                </button>
+            </header>
+
+            <section class="workspace">
+                <div class="welcome-section">
+                    <span class="section-label">
+                        YOUR PERSONAL AI COMPANION
+                    </span>
+
+                    <h1>
+                        THINK<br>
+                        <span>BEYOND.</span>
+                    </h1>
+
+                    <p class="welcome-description">
+                        An intelligent space designed around you.
+                        Start a conversation with S7VEN.
+                    </p>
+                </div>
+
+                <div class="conversation-area" id="conversation">
+                    <div class="empty-state">
+                        <span class="empty-state-mark">7</span>
+                        <p>YOUR NEXT CONVERSATION STARTS HERE.</p>
+                    </div>
+                </div>
+
+                <form class="composer" id="message-form">
+                    <textarea
+                        id="message-input"
+                        name="message"
+                        placeholder="Message S7VEN..."
+                        rows="1"
+                        aria-label="Message S7VEN"
+                    ></textarea>
+
+                    <button
+                        class="send-button"
+                        id="send-button"
+                        type="submit"
+                        aria-label="Send message"
+                        disabled
+                    >
+                        <span>↑</span>
+                    </button>
+                </form>
+
+                <footer class="workspace-footer">
+                    <span>S7VEN IS A PRIVATE AI SYSTEM.</span>
+                    <span>BUILT FOR YOU.</span>
+                </footer>
+            </section>
+        </main>
+
+    </div>
+
+    <script src="assets/js/app.js"></script>
 </body>
 </html>

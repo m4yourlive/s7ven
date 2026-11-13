@@ -1,0 +1,351 @@
+:root {
+    --color-background: #ffffff;
+    --color-surface: #f7f7f7;
+    --color-primary: #171717;
+    --color-secondary: #777777;
+    --color-muted: #aaaaaa;
+    --color-border: #e5e5e5;
+    --color-accent: #ff2d2d;
+
+    --font-heading: "Press Start 2P", monospace;
+    --font-body: "Share Tech Mono", monospace;
+
+    --sidebar-width: 250px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-width: 360px;
+    min-height: 100vh;
+    background: var(--color-background);
+    color: var(--color-primary);
+    font-family: var(--font-body);
+}
+
+button,
+textarea {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+.app-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* SIDEBAR */
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    width: var(--sidebar-width);
+    min-height: 100vh;
+    padding: 32px 24px;
+    border-right: 1px solid var(--color-border);
+}
+
+.brand {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.brand-name {
+    font-family: var(--font-heading);
+    font-size: 24px;
+    letter-spacing: -2px;
+}
+
+.brand-name span {
+    color: var(--color-accent);
+}
+
+.brand-version,
+.sidebar-version {
+    color: var(--color-muted);
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+
+.navigation {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 65px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 10px;
+    color: var(--color-secondary);
+    font-size: 14px;
+    text-decoration: none;
+    transition: color 150ms ease;
+}
+
+.nav-item:hover,
+.nav-item.active {
+    color: var(--color-primary);
+}
+
+.nav-indicator {
+    width: 5px;
+    height: 5px;
+    background: transparent;
+}
+
+.nav-item.active .nav-indicator {
+    background: var(--color-accent);
+}
+
+.sidebar-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-top: auto;
+}
+
+.system-status {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--color-secondary);
+    font-size: 10px;
+}
+
+.status-indicator {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-accent);
+}
+
+/* MAIN CONTENT */
+
+.main-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 76px;
+    padding: 0 48px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.topbar-label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.topbar-overline {
+    color: var(--color-muted);
+    font-size: 9px;
+    letter-spacing: 1px;
+}
+
+.topbar-title {
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.profile-button {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-primary);
+    font-size: 13px;
+}
+
+/* WORKSPACE */
+
+.workspace {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: min(100%, 1050px);
+    margin: 0 auto;
+    padding: 75px 48px 24px;
+}
+
+.welcome-section {
+    max-width: 600px;
+}
+
+.section-label {
+    color: var(--color-accent);
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+
+.welcome-section h1 {
+    margin-top: 30px;
+    font-family: var(--font-heading);
+    font-size: clamp(27px, 4vw, 43px);
+    line-height: 1.8;
+    letter-spacing: -2px;
+}
+
+.welcome-section h1 span {
+    color: var(--color-accent);
+}
+
+.welcome-description {
+    max-width: 390px;
+    margin-top: 15px;
+    color: var(--color-secondary);
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+/* CONVERSATION */
+
+.conversation-area {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    color: var(--color-muted);
+    text-align: center;
+}
+
+.empty-state-mark {
+    color: #eeeeee;
+    font-family: var(--font-heading);
+    font-size: 55px;
+}
+
+.empty-state p {
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+
+/* MESSAGE COMPOSER */
+
+.composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    min-height: 68px;
+    padding: 15px;
+    border: 1px solid var(--color-border);
+    background: var(--color-background);
+    transition: border-color 150ms ease;
+}
+
+.composer:focus-within {
+    border-color: var(--color-primary);
+}
+
+.composer textarea {
+    flex: 1;
+    min-height: 35px;
+    max-height: 150px;
+    resize: none;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--color-primary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.composer textarea::placeholder {
+    color: var(--color-muted);
+}
+
+.send-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: var(--color-accent);
+    color: white;
+    font-size: 23px;
+    transition: opacity 150ms ease;
+}
+
+.send-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+}
+
+.workspace-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 18px;
+    color: var(--color-muted);
+    font-size: 9px;
+    letter-spacing: 0.5px;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 760px) {
+    :root {
+        --sidebar-width: 190px;
+    }
+
+    .sidebar {
+        padding: 25px 16px;
+    }
+
+    .topbar {
+        padding: 0 25px;
+    }
+
+    .workspace {
+        padding: 55px 25px 20px;
+    }
+}
+
+@media (max-width: 560px) {
+    .sidebar {
+        display: none;
+    }
+
+    .topbar {
+        height: 65px;
+        padding: 0 20px;
+    }
+
+    .workspace {
+        padding: 45px 20px 18px;
+    }
+
+    .welcome-section h1 {
+        font-size: 27px;
+    }
+
+    .workspace-footer {
+        font-size: 8px;
+    }
+}
