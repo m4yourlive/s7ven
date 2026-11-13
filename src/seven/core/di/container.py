@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 from dependency_injector import containers, providers
@@ -7,6 +6,9 @@ from seven.core.config import AppConfig, ConfigurationManager
 from seven.core.events import EventBus
 from seven.core.logging import LoggerConfig, LoggerService
 from seven.core.runtime import RuntimeManager
+from seven.core.settings.settings_manager import SettingsManager
+from seven.core.settings.settings_store import SettingsStore
+
 
 def create_logger_config(
     config_manager: ConfigurationManager,
@@ -17,8 +19,10 @@ def create_logger_config(
         level=config.runtime.log_level,
     )
 
+
 def create_event_logger(logger_service: LoggerService):
     return logger_service.get_logger("EventBus")
+
 
 class SevenContainer(containers.DeclarativeContainer):
     """Central dependency injection container for Seven."""
@@ -49,6 +53,19 @@ class SevenContainer(containers.DeclarativeContainer):
         ),
     )
 
+    # Settings Store
+    settings_store = providers.Singleton(
+        SettingsStore,
+        path=Path("configs/settings.json"),
+    )
+
+    # Settings Manager
+    settings_manager = providers.Singleton(
+        SettingsManager,
+        store=settings_store,
+        event_bus=event_bus,
+    )
+
     # Runtime Manager
     runtime_manager = providers.Singleton(
         RuntimeManager,
@@ -61,10 +78,12 @@ class SevenContainer(containers.DeclarativeContainer):
         ),
     )
 
+
 def initialize_container(container: SevenContainer) -> None:
     """Start Seven through Runtime Manager."""
 
     container.runtime_manager().start()
+
 
 def shutdown_container(container: SevenContainer) -> None:
     """Stop Seven through Runtime Manager."""
