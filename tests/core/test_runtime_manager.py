@@ -1,13 +1,13 @@
-
 from seven.core.events import EventBus
 from seven.core.runtime import (
     RuntimeManager,
-    RuntimeState,
     RuntimeStarted,
     RuntimeStarting,
+    RuntimeState,
     RuntimeStopped,
     RuntimeStopping,
 )
+
 
 class FakeConfigManager:
     def __init__(self, fail: bool = False):
