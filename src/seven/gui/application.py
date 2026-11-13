@@ -1,24 +1,35 @@
 """S7VEN WebView application controller."""
 
-from pathlib import Path
-from typing import Any
+from __future__ import annotations
 
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from seven.gui.bridge import FrontendBridge
 from seven.gui.window import WindowConfig, create_webview_window
+
+if TYPE_CHECKING:
+    from seven.core.runtime.runtime_manager import RuntimeManager
 
 
 class WebViewApplication:
-    """Manage the pywebview application lifecycle."""
+    """Manage the WebView application and runtime lifecycle."""
 
     def __init__(
         self,
         config: WindowConfig | None = None,
         webview_api: Any | None = None,
+        bridge: FrontendBridge | None = None,
+        runtime_manager: RuntimeManager | None = None,
     ) -> None:
         self.config = config or WindowConfig()
+        self.bridge = bridge or FrontendBridge()
         self._webview_api = webview_api
+        self._runtime_manager = runtime_manager
         self._window: Any | None = None
         self._started = False
         self._closed = False
+        self._runtime_started_by_app = False
 
     @property
     def window(self) -> Any | None:
@@ -35,19 +46,18 @@ class WebViewApplication:
         """Return whether the application has been closed."""
         return self._closed
 
+    @property
+    def owns_runtime(self) -> bool:
+        """Return whether this application started the runtime."""
+        return self._runtime_started_by_app
+
     @staticmethod
     def _get_frontend_url() -> str:
         """Resolve the local frontend entry point."""
-        frontend_path = (
-            Path(__file__).resolve().parent
-            / "frontend"
-            / "index.html"
-        )
+        frontend_path = Path(__file__).resolve().parent / "frontend" / "index.html"
 
         if not frontend_path.is_file():
-            raise FileNotFoundError(
-                f"Frontend entry point not found: {frontend_path}"
-            )
+            raise FileNotFoundError(f"Frontend entry point not found: {frontend_path}")
 
         return frontend_path.as_uri()
 
@@ -68,14 +78,10 @@ class WebViewApplication:
     ) -> Any:
         """Create the main application window."""
         if self._closed:
-            raise RuntimeError(
-                "Cannot create a window after application closure."
-            )
+            raise RuntimeError("Cannot create a window after application closure.")
 
         if self._window is not None:
-            raise RuntimeError(
-                "Application window already exists."
-            )
+            raise RuntimeError("Application window already exists.")
 
         if url is None and html is None:
             url = self._get_frontend_url()
@@ -87,9 +93,20 @@ class WebViewApplication:
             self.config,
             url=url,
             html=html,
+            js_api=self.bridge,
         )
 
         return self._window
+
+    def _stop_owned_runtime(self) -> None:
+        """Stop the runtime only when started by this application."""
+        if not self._runtime_started_by_app:
+            return
+
+        self._runtime_started_by_app = False
+
+        if self._runtime_manager is not None:
+            self._runtime_manager.stop()
 
     def run(
         self,
@@ -98,30 +115,31 @@ class WebViewApplication:
         html: str | None = None,
         debug: bool = False,
     ) -> None:
-        """Create the main window and start the WebView event loop."""
+        """Start the runtime and WebView event loop."""
         if self._closed:
-            raise RuntimeError(
-                "Cannot run a closed application."
-            )
+            raise RuntimeError("Cannot run a closed application.")
 
         if self._started:
-            raise RuntimeError(
-                "Application has already been started."
-            )
+            raise RuntimeError("Application has already been started.")
 
         webview_api = self._get_webview_api()
 
-        self.create_window(
-            url=url,
-            html=html,
-        )
-
-        self._started = True
-
         try:
+            if self._runtime_manager is not None:
+                self._runtime_started_by_app = self._runtime_manager.start()
+
+            self.create_window(
+                url=url,
+                html=html,
+            )
+
+            self._started = True
+
             webview_api.start(debug=debug)
+
         finally:
             self._closed = True
+            self._stop_owned_runtime()
 
     def close(self) -> None:
         """Close the application window."""

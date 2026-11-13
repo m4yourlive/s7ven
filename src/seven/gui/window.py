@@ -39,6 +39,7 @@ def create_webview_window(
     *,
     url: str | None = None,
     html: str | None = None,
+    js_api: Any | None = None,
 ) -> Any:
     """Create a native window through the pywebview API."""
 
@@ -60,4 +61,5 @@ def create_webview_window(
         min_size=(config.min_width, config.min_height),
         resizable=config.resizable,
         fullscreen=config.fullscreen,
+        js_api=js_api,
     )

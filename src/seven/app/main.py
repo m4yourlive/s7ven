@@ -1,41 +1,25 @@
+
+"""S7VEN desktop application entry point."""
+
 import sys
 
-from PySide6.QtWidgets import QApplication
-from seven.ui.main_window import SevenMainWindow
-
-from seven.core.logging import LoggerService
+from seven.core.di.container import SevenContainer
+from seven.gui import WebViewApplication
 
 
 def main() -> int:
-    logging_service = LoggerService()
-    logging_service.start()
+    """Initialize dependencies and run the S7VEN desktop application."""
+    container = SevenContainer()
 
-    log = logging_service.get_logger("seven.app")
+    runtime_manager = container.runtime_manager()
 
-    try:
-        log.info("Starting Seven Desktop")
+    application = WebViewApplication(
+        runtime_manager=runtime_manager,
+    )
 
-        app = QApplication(sys.argv)
-        app.setApplicationName("Seven")
-        app.setOrganizationName("Seven")
+    application.run()
 
-        window = SevenMainWindow()
-        window.show()
-
-        log.success("Seven Desktop started successfully")
-
-        exit_code = app.exec()
-
-        log.info("Seven Desktop shutting down")
-
-        return exit_code
-
-    except Exception:
-        log.exception("Fatal application error")
-        raise
-
-    finally:
-        logging_service.stop()
+    return 0
 
 
 if __name__ == "__main__":
