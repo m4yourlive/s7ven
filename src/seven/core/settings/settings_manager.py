@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from copy import deepcopy
@@ -5,7 +6,14 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from seven.core.events import EventBus
 from seven.core.settings.defaults import create_default_settings
+from seven.core.settings.events import (
+    SettingsChanged,
+    SettingsLoaded,
+    SettingsReset,
+    SettingsSaved,
+)
 from seven.core.settings.exceptions import (
     SettingsNotLoadedError,
     SettingsPersistenceError,
@@ -21,9 +29,11 @@ class SettingsManager:
     def __init__(
         self,
         store: SettingsStore | None = None,
+        event_bus: EventBus | None = None,
     ) -> None:
         self._settings: UserSettings | None = None
         self._store = store
+        self._event_bus = event_bus
 
     @property
     def is_loaded(self) -> bool:
@@ -67,6 +77,8 @@ class SettingsManager:
             ) from exc
 
         self._settings = validated
+
+        self._publish(SettingsLoaded())
 
         return self.settings
 
@@ -119,11 +131,15 @@ class SettingsManager:
                 "Setting key must be a valid dot path."
             )
 
-        data = self.as_dict()
+        old_data = self.as_dict()
+        data = deepcopy(old_data)
+
         path = key.split(".")
 
         self._set_nested(data, path, value)
         self._validate_and_apply(data)
+
+        self._publish_changes(old_data, self.as_dict())
 
     def update(self, data: dict[str, Any]) -> None:
         """Update multiple settings with deep merge."""
@@ -133,15 +149,19 @@ class SettingsManager:
                 "Settings update must be a dictionary."
             )
 
-        current = self.as_dict()
-        merged = self._deep_merge(current, data)
+        old_data = self.as_dict()
+        merged = self._deep_merge(old_data, data)
 
         self._validate_and_apply(merged)
+
+        self._publish_changes(old_data, self.as_dict())
 
     def reset(self) -> UserSettings:
         """Reset all settings to their default values."""
 
         self._settings = create_default_settings()
+
+        self._publish(SettingsReset())
 
         return self.settings
 
@@ -160,10 +180,81 @@ class SettingsManager:
 
         self._store.save(self.as_dict())
 
+        self._publish(SettingsSaved())
+
     def as_dict(self) -> dict[str, Any]:
         """Return a safe dictionary copy of current settings."""
 
         return self.settings.model_dump(mode="python")
+
+    def _publish(self, event: Any) -> None:
+        """Publish an event when Event Bus is available."""
+
+        if self._event_bus is not None:
+            self._event_bus.publish(event)
+
+    def _publish_changes(
+        self,
+        old_data: dict[str, Any],
+        new_data: dict[str, Any],
+        prefix: str = "",
+    ) -> None:
+        """Publish events for individual changed setting paths."""
+
+        for key, old_value, new_value in self._collect_changes(
+            old_data,
+            new_data,
+            prefix,
+        ):
+            self._publish(
+                SettingsChanged(
+                    key=key,
+                    old_value=deepcopy(old_value),
+                    new_value=deepcopy(new_value),
+                )
+            )
+
+    @classmethod
+    def _collect_changes(
+        cls,
+        old_data: dict[str, Any],
+        new_data: dict[str, Any],
+        prefix: str = "",
+    ) -> list[tuple[str, Any, Any]]:
+        """Collect changed values using dot notation."""
+
+        changes: list[tuple[str, Any, Any]] = []
+
+        keys = dict.fromkeys(
+            (*old_data.keys(), *new_data.keys())
+        )
+
+        for key in keys:
+            old_value = old_data.get(key)
+            new_value = new_data.get(key)
+
+            full_key = (
+                f"{prefix}.{key}" if prefix else key
+            )
+
+            if (
+                isinstance(old_value, dict)
+                and isinstance(new_value, dict)
+            ):
+                changes.extend(
+                    cls._collect_changes(
+                        old_value,
+                        new_value,
+                        full_key,
+                    )
+                )
+
+            elif old_value != new_value:
+                changes.append(
+                    (full_key, old_value, new_value)
+                )
+
+        return changes
 
     def _validate_and_apply(
         self,
