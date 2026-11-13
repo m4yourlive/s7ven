@@ -21,3 +21,15 @@ src/seven/core/events/event.py
 src/seven/core/events/event_bus.py
 src/seven/core/logging/__init__.py
 src/seven/core/logging/logger_service.py
+src/seven/core/runtime/__init__.py
+src/seven/core/runtime/runtime_events.py
+src/seven/core/runtime/runtime_manager.py
+src/seven/core/runtime/runtime_state.py
+src/seven/core/settings/__init__.py
+src/seven/core/settings/defaults.py
+src/seven/core/settings/events.py
+src/seven/core/settings/exceptions.py
+src/seven/core/settings/settings_manager.py
+src/seven/core/settings/settings_schema.py
+src/seven/core/settings/settings_store.py
+src/seven/gui/frontend/assets/__init__.py

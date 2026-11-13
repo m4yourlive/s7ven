@@ -1,9 +1,8 @@
 from collections import defaultdict
+from collections.abc import Callable
 from threading import RLock
-from typing import Callable
 
 from seven.core.events.event import Event
-
 
 EventHandler = Callable[[Event], None]
 

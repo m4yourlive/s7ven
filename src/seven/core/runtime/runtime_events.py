@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from seven.core.events import Event
 
+
 @dataclass(frozen=True, slots=True)
 class RuntimeStarting(Event):
     pass

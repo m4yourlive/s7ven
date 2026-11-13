@@ -14,6 +14,7 @@ Requires-Dist: python-dotenv>=1.1
 Requires-Dist: dependency-injector>=4.41
 Requires-Dist: httpx>=0.28
 Requires-Dist: PySide6>=6.8
+Requires-Dist: pywebview>=5.4
 Requires-Dist: SQLAlchemy>=2.0
 Requires-Dist: aiosqlite>=0.20
 Requires-Dist: openai>=1.0

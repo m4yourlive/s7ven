@@ -45,9 +45,3 @@ __all__ = [
     "SettingsSaved",
 ]
 
-from seven.core.settings.events import (
-    SettingsChanged,
-    SettingsLoaded,
-    SettingsReset,
-    SettingsSaved,
-)

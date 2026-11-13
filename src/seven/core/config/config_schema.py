@@ -1,5 +1,7 @@
 from pathlib import Path
+
 from pydantic import BaseModel, ConfigDict, Field
+
 
 class StrictConfigModel(BaseModel):
     """Base model for Seven configuration"""

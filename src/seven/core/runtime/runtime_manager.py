@@ -1,10 +1,9 @@
+from collections.abc import Callable
 from threading import RLock
-from typing import Callable
 
 from seven.core.config import ConfigurationManager
 from seven.core.events import EventBus
 from seven.core.logging import LoggerService
-
 from seven.core.runtime.runtime_events import (
     RuntimeFailed,
     RuntimeStarted,
@@ -12,8 +11,8 @@ from seven.core.runtime.runtime_events import (
     RuntimeStopped,
     RuntimeStopping,
 )
-
 from seven.core.runtime.runtime_state import RuntimeState
+
 
 class RuntimeManager:
     """

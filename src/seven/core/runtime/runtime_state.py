@@ -1,6 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
-class RuntimeState(str, Enum):
+
+class RuntimeState(StrEnum):
     STOPPED = "stopped"
     STARTING = "starting"
     RUNNING = "running"

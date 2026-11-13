@@ -1,4 +1,4 @@
-from seven.core.config.config_manager  import ConfigurationManager
+from seven.core.config.config_manager import ConfigurationManager
 from seven.core.config.config_schema import AppConfig
 from seven.core.config.exceptions import (
     ConfigurationError,

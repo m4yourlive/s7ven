@@ -17,7 +17,7 @@ def test_di_diagnostic():
 
     print("[4] Resolving LoggerService")
 
-    logger = container.logger_service()
+    container.logger_service()
 
     print("[5] Resolving EventBus")
 
