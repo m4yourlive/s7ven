@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,7 +6,7 @@
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="#f3f3f4">
     <meta
         name="description"
         content="S7VEN - Your private AI companion."
@@ -15,16 +14,49 @@
 
     <title>S7VEN</title>
 
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets\css\style.css">
+    <!-- Gaya tambahan untuk redesign Home (dimuat setelah style.css) -->
+    <link rel="stylesheet" href="assets\css\dashboard.css">
+    <link rel="stylesheet" href="assets\css\tokens.css">
 </head>
 
 <body>
+    <!-- Ikon SVG (sprite). Dipakai lewat <use href="#icon-...">. -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <symbol id="icon-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5M5.5 10v9.5h13V10M10 19.5v-5h4v5"/></symbol>
+        <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M20 15a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></symbol>
+        <symbol id="icon-brain" viewBox="0 0 24 24"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-1.5 5.5A3 3 0 0 0 7 17.5 2.5 2.5 0 0 0 12 19V5a2 2 0 0 0-3-1z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 1.5 5.5A3 3 0 0 1 17 17.5 2.5 2.5 0 0 1 12 19V5a2 2 0 0 1 3-1z"/></symbol>
+        <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+        <symbol id="icon-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol>
+        <symbol id="icon-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+        <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></symbol>
+        <symbol id="icon-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6"/></symbol>
+        <symbol id="icon-bitcoin" viewBox="0 0 24 24"><path d="M8 5h6a3 3 0 0 1 0 6H8zM8 11h7a3 3 0 0 1 0 6H8zM8 5v12M10 3v2M13 3v2M10 17v2M13 17v2"/></symbol>
+        <symbol id="icon-weather" viewBox="0 0 24 24"><path d="M7 19a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 10.5 4 4 0 0 1 17 19z"/><path d="M12 2.5v2M5 5l1.4 1.4M19 5l-1.4 1.4"/></symbol>
+        <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h2M14 14h2M8 17.5h2"/></symbol>
+        <symbol id="icon-star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+        <symbol id="icon-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></symbol>
+        <symbol id="icon-clip" viewBox="0 0 24 24"><path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7-7l8.6-8.6a3.4 3.4 0 0 1 5 5l-8.6 8.6a1.7 1.7 0 0 1-2.4-2.4l7.9-7.9"/></symbol>
+        <symbol id="icon-scan" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M9 12h6"/></symbol>
+        <symbol id="icon-send" viewBox="0 0 24 24"><path d="M21 3 3 10.5l6.5 2.5L12 20z"/></symbol>
+        <symbol id="icon-wave" viewBox="0 0 24 24"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4"/></symbol>
+        <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+        <symbol id="icon-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3M10 10h4v4h-4z"/></symbol>
+        <symbol id="icon-ram" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="1.5"/><path d="M6 17v2M10 17v2M14 17v2M18 17v2M6 11h2M11 11h2M16 11h2"/></symbol>
+        <symbol id="icon-wifi" viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5v.01"/></symbol>
+        <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+        <symbol id="icon-prev" viewBox="0 0 24 24"><path d="M19 5v14L9 12zM6 5v14"/></symbol>
+        <symbol id="icon-next" viewBox="0 0 24 24"><path d="M5 5v14l10-7zM18 5v14"/></symbol>
+        <symbol id="icon-pause" viewBox="0 0 24 24"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></symbol>
+    </svg>
+
     <div class="app-container" id="app-shell">
 
         <aside class="sidebar" aria-label="Main sidebar">
             <div class="brand">
+                <span class="brand-mark" aria-hidden="true">7</span>
                 <span class="brand-name">S7VEN<span>.</span></span>
-                <span class="brand-version">PERSONAL AI SYSTEM</span>
+                <span class="brand-version">Personal AI Companion</span>
             </div>
 
             <nav class="navigation" aria-label="Main navigation">
@@ -37,7 +69,8 @@
                     aria-current="page"
                 >
                     <span class="nav-indicator"></span>
-                    <span class="nav-label">NEW SESSION</span>
+                    <svg class="icon nav-icon" aria-hidden="true"><use href="#icon-home"/></svg>
+                    <span class="nav-label">Home</span>
                 </a>
 
                 <a
@@ -46,7 +79,8 @@
                     data-nav-target="conversations"
                 >
                     <span class="nav-indicator"></span>
-                    <span class="nav-label">CONVERSATIONS</span>
+                    <svg class="icon nav-icon" aria-hidden="true"><use href="#icon-chat"/></svg>
+                    <span class="nav-label">Conversations</span>
                 </a>
 
                 <span class="navigation-heading navigation-heading-secondary">
@@ -59,8 +93,21 @@
                     data-nav-target="memory"
                 >
                     <span class="nav-indicator"></span>
-                    <span class="nav-label">MEMORY</span>
+                    <svg class="icon nav-icon" aria-hidden="true"><use href="#icon-brain"/></svg>
+                    <span class="nav-label">Memory</span>
                 </a>
+
+                <!-- Placeholder visual dari desain baru: belum punya halaman / JS,
+                     jadi sengaja TANPA class .nav-item dan data-nav-target. -->
+                <span class="nav-static" aria-disabled="true" title="Coming soon">
+                    <svg class="icon nav-icon" aria-hidden="true"><use href="#icon-grid"/></svg>
+                    <span class="nav-label">Skills</span>
+                </span>
+
+                <span class="nav-static" aria-disabled="true" title="Coming soon">
+                    <svg class="icon nav-icon" aria-hidden="true"><use href="#icon-monitor"/></svg>
+                    <span class="nav-label">Devices</span>
+                </span>
 
                 <a
                     href="#settings"
@@ -68,8 +115,14 @@
                     data-nav-target="settings"
                 >
                     <span class="nav-indicator"></span>
-                    <span class="nav-label">SETTINGS</span>
+                    <svg class="icon nav-icon" aria-hidden="true"><use href="#icon-gear"/></svg>
+                    <span class="nav-label">Settings</span>
                 </a>
+
+                <span class="nav-static" aria-disabled="true" title="Coming soon">
+                    <svg class="icon nav-icon" aria-hidden="true"><use href="#icon-info"/></svg>
+                    <span class="nav-label">About</span>
+                </span>
             </nav>
 
             <div class="sidebar-bottom">
@@ -79,6 +132,10 @@
                 </div>
 
                 <span class="sidebar-version">S7VEN BUILD 001</span>
+
+                <span class="sidebar-eq" aria-hidden="true">
+                    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                </span>
             </div>
         </aside>
 
@@ -88,6 +145,17 @@
                 <div class="topbar-label">
                     <span class="topbar-overline">WORKSPACE</span>
                     <span class="topbar-title">PERSONAL ASSISTANT</span>
+                </div>
+
+                <div class="topbar-status">
+                    <span class="listening-pill">
+                        <span class="listening-dot" aria-hidden="true"></span>
+                        Listening...
+                    </span>
+
+                    <span class="wave" aria-hidden="true">
+                        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                    </span>
                 </div>
 
                 <button
@@ -107,20 +175,58 @@
                 aria-label="Main workspace"
             >
                 <div class="welcome-section">
-                    <span class="section-label">
-                        YOUR PERSONAL AI COMPANION
-                    </span>
-
                     <h1>
-                        THINK<br>
-                        <span>BEYOND.</span>
+                        <span id="greeting-text">Good evening,</span>
+                        <span class="greeting-name">Malvin</span><span class="greeting-name">.</span>
                     </h1>
 
                     <p class="welcome-description">
-                        An intelligent space designed around you.
-                        Start a conversation with S7VEN.
+                        How can I help you today?
                     </p>
                 </div>
+
+                <div class="hero-orb" aria-hidden="true">
+                    <span class="orb-corner orb-corner-tl"></span>
+                    <span class="orb-corner orb-corner-tr"></span>
+                    <span class="orb-corner orb-corner-bl"></span>
+                    <span class="orb-corner orb-corner-br"></span>
+                    <div class="orb">
+                        <span class="orb-ring"></span>
+                        <span class="orb-core">7</span>
+                    </div>
+                </div>
+
+                <section class="panel quick-actions" aria-label="Quick actions">
+                    <div class="panel-header">
+                        <h2 class="panel-title"><span class="panel-slashes">//</span> Quick Actions</h2>
+                        <span class="panel-hint">
+                            Press <kbd>Ctrl</kbd> + <kbd>K</kbd> for command palette
+                        </span>
+                    </div>
+
+                    <div class="quick-actions-grid">
+                        <button type="button" class="quick-action" data-quick-prompt="Open my notes.">
+                            <svg class="icon" aria-hidden="true"><use href="#icon-file"/></svg>
+                            <span>Open Notes</span>
+                        </button>
+                        <button type="button" class="quick-action" data-quick-prompt="Check the latest Bitcoin price.">
+                            <svg class="icon" aria-hidden="true"><use href="#icon-bitcoin"/></svg>
+                            <span>Check Crypto</span>
+                        </button>
+                        <button type="button" class="quick-action" data-quick-prompt="What's the weather?">
+                            <svg class="icon" aria-hidden="true"><use href="#icon-weather"/></svg>
+                            <span>What's the weather?</span>
+                        </button>
+                        <button type="button" class="quick-action" data-quick-prompt="Show my memory.">
+                            <svg class="icon" aria-hidden="true"><use href="#icon-brain"/></svg>
+                            <span>Show Memory</span>
+                        </button>
+                        <button type="button" class="quick-action" data-quick-prompt="Open my calendar.">
+                            <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg>
+                            <span>Open Calendar</span>
+                        </button>
+                    </div>
+                </section>
 
                 <div
                     class="conversation-area"
@@ -139,17 +245,36 @@
                     id="message-form"
                     aria-label="Message composer"
                 >
+                    <button
+                        class="voice-button"
+                        type="button"
+                        aria-label="Voice input"
+                    >
+                        <svg class="icon" aria-hidden="true"><use href="#icon-wave"/></svg>
+                    </button>
+
                     <div class="composer-input-wrapper">
-                        <textarea
-                            id="message-input"
-                            name="message"
-                            placeholder="Message S7VEN..."
-                            rows="1"
-                            maxlength="4000"
-                            aria-label="Message S7VEN"
-                            aria-describedby="composer-hint character-counter"
-                            autocomplete="off"
-                        ></textarea>
+                        <div class="composer-field">
+                            <textarea
+                                id="message-input"
+                                name="message"
+                                placeholder="Type a message..."
+                                rows="1"
+                                maxlength="4000"
+                                aria-label="Message S7VEN"
+                                aria-describedby="composer-hint character-counter"
+                                autocomplete="off"
+                            ></textarea>
+
+                            <div class="composer-tools">
+                                <button type="button" class="composer-tool" aria-label="Attach file">
+                                    <svg class="icon" aria-hidden="true"><use href="#icon-clip"/></svg>
+                                </button>
+                                <button type="button" class="composer-tool" aria-label="Capture screen">
+                                    <svg class="icon" aria-hidden="true"><use href="#icon-scan"/></svg>
+                                </button>
+                            </div>
+                        </div>
 
                         <div class="composer-meta">
                             <span id="composer-hint">
@@ -171,9 +296,102 @@
                         aria-label="Send message"
                         disabled
                     >
-                        <span class="send-button-icon" aria-hidden="true">↑</span>
+                        <span class="send-button-icon" aria-hidden="true">
+                            <svg class="icon icon-fill"><use href="#icon-send"/></svg>
+                        </span>
                     </button>
                 </form>
+
+                <!-- Panel kanan. Angka di sini masih placeholder statis;
+                     sambungkan lewat atribut data-metric bila Runtime sudah siap. -->
+                <aside class="insight-panels" aria-label="System overview">
+
+                    <details class="panel" open>
+                        <summary class="panel-header">
+                            <h2 class="panel-title"><span class="panel-slashes">//</span> Seven Status</h2>
+                            <svg class="icon panel-chevron" aria-hidden="true"><use href="#icon-chevron"/></svg>
+                        </summary>
+
+                        <ul class="metric-list">
+                            <li class="metric">
+                                <svg class="icon metric-icon" aria-hidden="true"><use href="#icon-cpu"/></svg>
+                                <div class="metric-body">
+                                    <div class="metric-row"><span>CPU Usage</span><span data-metric="cpu">14%</span></div>
+                                    <div class="meter" style="--value:14%"><span></span></div>
+                                </div>
+                            </li>
+                            <li class="metric">
+                                <svg class="icon metric-icon" aria-hidden="true"><use href="#icon-ram"/></svg>
+                                <div class="metric-body">
+                                    <div class="metric-row"><span>Memory Usage</span><span data-metric="ram">37%</span></div>
+                                    <div class="meter" style="--value:37%"><span></span></div>
+                                </div>
+                            </li>
+                            <li class="metric">
+                                <svg class="icon metric-icon" aria-hidden="true"><use href="#icon-wifi"/></svg>
+                                <div class="metric-body">
+                                    <div class="metric-row"><span>Network</span><span class="is-success" data-metric="network">Online</span></div>
+                                </div>
+                            </li>
+                            <li class="metric">
+                                <svg class="icon metric-icon" aria-hidden="true"><use href="#icon-clock"/></svg>
+                                <div class="metric-body">
+                                    <div class="metric-row"><span>Uptime</span><span data-metric="uptime">2h 14m</span></div>
+                                </div>
+                            </li>
+                        </ul>
+                    </details>
+
+                    <details class="panel" open>
+                        <summary class="panel-header">
+                            <h2 class="panel-title"><span class="panel-slashes">//</span> Memory Overview</h2>
+                            <svg class="icon panel-chevron" aria-hidden="true"><use href="#icon-chevron"/></svg>
+                        </summary>
+
+                        <div class="memory-overview">
+                            <div class="donut" style="--personal:62%; --conversations:90%">
+                                <svg class="icon" aria-hidden="true"><use href="#icon-brain"/></svg>
+                            </div>
+
+                            <div class="memory-info">
+                                <span class="memory-total-label">Total Memories</span>
+                                <strong class="memory-total" data-metric="memory-total">842 MB</strong>
+                                <ul class="legend">
+                                    <li><span class="legend-dot legend-personal"></span>Personal<b>62%</b></li>
+                                    <li><span class="legend-dot legend-conversations"></span>Conversations<b>28%</b></li>
+                                    <li><span class="legend-dot legend-others"></span>Others<b>10%</b></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="panel" open>
+                        <summary class="panel-header">
+                            <h2 class="panel-title"><span class="panel-slashes">//</span> Today's Highlights</h2>
+                            <svg class="icon panel-chevron" aria-hidden="true"><use href="#icon-chevron"/></svg>
+                        </summary>
+
+                        <ul class="highlight-list">
+                            <li><svg class="icon icon-fill highlight-star" aria-hidden="true"><use href="#icon-star"/></svg>You have 3 new memories</li>
+                            <li><svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg>1 event today</li>
+                            <li><svg class="icon" aria-hidden="true"><use href="#icon-trend"/></svg>BTC is +2.1%</li>
+                        </ul>
+                    </details>
+
+                    <section class="panel now-playing" aria-label="Currently playing">
+                        <span class="now-playing-art" aria-hidden="true"></span>
+                        <div class="now-playing-body">
+                            <span class="now-playing-label">Currently Playing</span>
+                            <strong class="now-playing-title">After Dark</strong>
+                            <span class="now-playing-artist">Mr.Kitty</span>
+                            <div class="now-playing-controls">
+                                <button type="button" aria-label="Previous track"><svg class="icon icon-fill"><use href="#icon-prev"/></svg></button>
+                                <button type="button" aria-label="Pause"><svg class="icon icon-fill"><use href="#icon-pause"/></svg></button>
+                                <button type="button" aria-label="Next track"><svg class="icon icon-fill"><use href="#icon-next"/></svg></button>
+                            </div>
+                        </div>
+                    </section>
+                </aside>
 
                 <footer class="workspace-footer">
                     <span>S7VEN IS A PRIVATE AI SYSTEM.</span>
@@ -440,9 +658,254 @@
                 </footer>
             </section>
 
+
+            <!-- MEMORY PAGE -->
+            <section
+                class="workspace memory-page page"
+                id="memory-page"
+                data-page="memory"
+                aria-label="Memory management"
+                hidden
+            >
+                <!-- Header -->
+                <div class="memory-header">
+                    <div>
+                        <span class="section-label">KNOWLEDGE CENTER</span>
+                        <h1 class="memory-title">MEMORY<span>.</span></h1>
+                        <p class="memory-description">
+                            Manage the information S7VEN remembers about you.
+                        </p>
+                    </div>
+
+                    <span class="memory-version">MEMORY / 001</span>
+                </div>
+
+                <!-- Memory Overview -->
+                <section class="memory-stats" aria-label="Memory statistics">
+
+                    <article class="memory-stat-card">
+                        <span class="memory-stat-label">TOTAL MEMORIES</span>
+                        <strong class="memory-stat-value" data-memory-stat="total">
+                            0
+                        </strong>
+                        <span class="memory-stat-description">
+                            Stored information
+                        </span>
+                    </article>
+
+                    <article class="memory-stat-card">
+                        <span class="memory-stat-label">CATEGORIES</span>
+                        <strong class="memory-stat-value" data-memory-stat="categories">
+                            4
+                        </strong>
+                        <span class="memory-stat-description">
+                            Memory classifications
+                        </span>
+                    </article>
+
+                    <article class="memory-stat-card">
+                        <span class="memory-stat-label">STORAGE USED</span>
+                        <strong class="memory-stat-value" data-memory-stat="storage">
+                            0 KB
+                        </strong>
+                        <span class="memory-stat-description">
+                            Local memory storage
+                        </span>
+                    </article>
+                </section>
+
+                <!-- Memory Toolbar -->
+                <section class="memory-toolbar" aria-label="Memory tools">
+
+                    <div class="memory-toolbar-heading">
+                        <div>
+                            <h2>YOUR MEMORIES</h2>
+                            <p>Browse and organize stored information.</p>
+                        </div>
+                    </div>
+
+                    <div class="memory-search-wrapper">
+                        <label for="memory-search" class="visually-hidden">
+                            Search memories
+                        </label>
+
+                        <input
+                            type="search"
+                            id="memory-search"
+                            name="memory_search"
+                            placeholder="Search memories..."
+                            autocomplete="off"
+                            data-memory-search
+                        >
+                    </div>
+                </section>
+
+                <!-- Memory Categories -->
+                <nav
+                    class="memory-categories"
+                    aria-label="Memory categories"
+                >
+                    <button
+                        type="button"
+                        class="memory-category active"
+                        data-memory-filter="all"
+                        aria-pressed="true"
+                    >
+                        ALL MEMORIES
+                    </button>
+
+                    <button
+                        type="button"
+                        class="memory-category"
+                        data-memory-filter="personal"
+                        aria-pressed="false"
+                    >
+                        PERSONAL
+                    </button>
+
+                    <button
+                        type="button"
+                        class="memory-category"
+                        data-memory-filter="preferences"
+                        aria-pressed="false"
+                    >
+                        PREFERENCES
+                    </button>
+
+                    <button
+                        type="button"
+                        class="memory-category"
+                        data-memory-filter="projects"
+                        aria-pressed="false"
+                    >
+                        PROJECTS
+                    </button>
+
+                    <button
+                        type="button"
+                        class="memory-category"
+                        data-memory-filter="knowledge"
+                        aria-pressed="false"
+                    >
+                        KNOWLEDGE
+                    </button>
+                </nav>
+
+
+                <!-- Memory Browser -->
+                <div class="memory-browser">
+
+                    <!-- Memory List -->
+                    <section
+                        class="memory-list-section"
+                        aria-label="Stored memories"
+                    >
+                        <div class="memory-list-header">
+                            <span>MEMORY DATABASE</span>
+                            <span data-memory-count>0 RECORDS</span>
+                        </div>
+
+                        <div
+                            class="memory-list"
+                            id="memory-list"
+                            aria-live="polite"
+                            aria-relevant="additions removals text"
+                        >
+                            <div
+                                class="memory-empty-state"
+                                id="memory-empty-state"
+                            >
+                                <span class="memory-empty-mark" aria-hidden="true">7</span>
+
+                                <h3>NO MEMORIES FOUND</h3>
+
+                                <p>
+                                    Your stored memories will appear here once
+                                    S7VEN starts remembering information.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Memory Detail Panel -->
+                    <aside
+                        class="memory-detail-panel"
+                        aria-label="Memory details"
+                    >
+                        <div class="memory-detail-header">
+                            <span>MEMORY DETAILS</span>
+                            <span class="memory-detail-indicator">
+                                <span></span>
+                                STANDBY
+                            </span>
+                        </div>
+
+                        <div class="memory-detail-empty">
+                            <div class="memory-detail-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path
+                                        d="M12 3L19 7V17L12 21L5 17V7L12 3Z"
+                                        stroke="currentColor"
+                                        stroke-width="1.2"
+                                    />
+                                    <path
+                                        d="M12 3V21M5 7L19 17M19 7L5 17"
+                                        stroke="currentColor"
+                                        stroke-width="1.2"
+                                    />
+                                </svg>
+                            </div>
+
+                            <h3>NO MEMORY SELECTED</h3>
+
+                            <p>
+                                Select a memory record to inspect its
+                                content and metadata.
+                            </p>
+                        </div>
+
+                        <div class="memory-detail-footer">
+                            <span>RECORD STATUS</span>
+                            <span>AWAITING SELECTION</span>
+                        </div>
+                    </aside>
+
+                </div>
+
+                <!-- Memory Footer -->
+                <footer class="workspace-footer">
+                    <span>S7VEN MEMORY SYSTEM.</span>
+                    <span>YOUR DATA. YOUR CONTROL.</span>
+                </footer>
+            </section>
+
+
         </main>
     </div>
 
     <script src="assets/js/app.js"></script>
+
+    <!-- Tambahan visual saja: sapaan sesuai jam + Quick Actions mengisi kolom pesan. -->
+    <script>
+        (function () {
+            var hour = new Date().getHours();
+            var greeting = hour < 5 ? "Good night"
+                : hour < 12 ? "Good morning"
+                : hour < 18 ? "Good afternoon"
+                : "Good evening";
+            var greetingEl = document.getElementById("greeting-text");
+            if (greetingEl) { greetingEl.textContent = greeting + ","; }
+
+            document.querySelectorAll("[data-quick-prompt]").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    var input = document.getElementById("message-input");
+                    if (!input) { return; }
+                    input.value = button.getAttribute("data-quick-prompt");
+                    input.dispatchEvent(new Event("input", { bubbles: true }));
+                    input.focus();
+                });
+            });
+        })();
+    </script>
 </body>
 </html>

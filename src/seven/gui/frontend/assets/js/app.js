@@ -27,7 +27,18 @@ const navigationItems = document.querySelectorAll(
     "[data-nav-target]"
 );
 
+const pages = document.querySelectorAll("[data-page]");
+
+const settingsNavigationItems = document.querySelectorAll(
+    "[data-settings-target]"
+);
+
+const settingsSections = document.querySelectorAll(
+    "[data-settings-section]"
+);
+
 const topbarTitle = document.querySelector(".topbar-title");
+const topbarOverline = document.querySelector(".topbar-overline");
 
 /* =========================================
    APPLICATION STATE
@@ -37,8 +48,33 @@ let bridgeReady = false;
 let isProcessing = false;
 
 /* =========================================
-   NAVIGATION
+   PAGE NAVIGATION
 ========================================= */
+
+function setActivePage(target) {
+    const selectedPage = Array.from(pages).find(
+        (page) => page.dataset.page === target
+    );
+
+    if (!selectedPage) {
+        return false;
+    }
+
+    pages.forEach((page) => {
+        const isActive = page === selectedPage;
+
+        page.hidden = !isActive;
+        page.setAttribute("aria-hidden", String(!isActive));
+    });
+
+    if (topbarOverline) {
+        topbarOverline.textContent = target === "settings"
+            ? "PREFERENCES"
+            : "WORKSPACE";
+    }
+
+    return true;
+}
 
 function setActiveNavigation(target) {
     const selectedItem = Array.from(navigationItems).find(
@@ -68,6 +104,8 @@ function setActiveNavigation(target) {
             topbarTitle.textContent = label.textContent.trim();
         }
     }
+
+    setActivePage(target);
 }
 
 function initializeNavigation() {
@@ -92,6 +130,295 @@ function initializeNavigation() {
     if (initialActiveItem) {
         setActiveNavigation(initialActiveItem.dataset.navTarget);
     }
+}
+
+/* =========================================
+   SETTINGS CATEGORY NAVIGATION
+========================================= */
+
+function setActiveSettingsSection(target) {
+    const selectedItem = Array.from(settingsNavigationItems).find(
+        (item) => item.dataset.settingsTarget === target
+    );
+
+    const selectedSection = Array.from(settingsSections).find(
+        (section) => section.dataset.settingsSection === target
+    );
+
+    if (!selectedItem || !selectedSection) {
+        return;
+    }
+
+    settingsNavigationItems.forEach((item) => {
+        const isActive = item === selectedItem;
+
+        item.classList.toggle("active", isActive);
+
+        if (isActive) {
+            item.setAttribute("aria-current", "true");
+        } else {
+            item.removeAttribute("aria-current");
+        }
+    });
+
+    settingsSections.forEach((section) => {
+        const isActive = section === selectedSection;
+
+        section.hidden = !isActive;
+        section.setAttribute("aria-hidden", String(!isActive));
+    });
+}
+
+function initializeSettingsNavigation() {
+    settingsNavigationItems.forEach((item) => {
+        item.addEventListener("click", (event) => {
+            event.preventDefault();
+
+            const target = item.dataset.settingsTarget;
+
+            if (!target) {
+                return;
+            }
+
+            setActiveSettingsSection(target);
+        });
+    });
+
+    const initialActiveItem = document.querySelector(
+        "[data-settings-target].active"
+    );
+
+    if (initialActiveItem) {
+        setActiveSettingsSection(
+            initialActiveItem.dataset.settingsTarget
+        );
+    }
+}
+
+
+/* =========================================
+   MEMORY SEARCH & CATEGORY FILTERING
+========================================= */
+
+const memoryList = document.getElementById("memory-list");
+
+const memorySearchInput = document.getElementById(
+    "memory-search"
+);
+
+const memoryCategoryButtons = document.querySelectorAll(
+    "[data-memory-filter]"
+);
+
+const memoryCount = document.querySelector(
+    "[data-memory-count]"
+);
+
+const memoryTotalStat = document.querySelector(
+    '[data-memory-stat="total"]'
+);
+
+const memoryEmptyState = document.getElementById(
+    "memory-empty-state"
+);
+
+const memoryEmptyTitle = memoryEmptyState?.querySelector("h3");
+const memoryEmptyDescription = memoryEmptyState?.querySelector("p");
+
+let activeMemoryCategory = "all";
+let memorySearchQuery = "";
+
+const DEFAULT_MEMORY_EMPTY_STATE = {
+    title: "NO MEMORIES FOUND",
+    description:
+        "Your stored memories will appear here once S7VEN starts remembering information.",
+};
+
+const FILTERED_MEMORY_EMPTY_STATE = {
+    title: "NO MATCHING MEMORIES",
+    description:
+        "Try another search term or select a different category.",
+};
+
+/* Get all rendered memory records */
+
+function getMemoryCards() {
+    if (!memoryList) {
+        return [];
+    }
+
+    return Array.from(
+        memoryList.querySelectorAll(".memory-card")
+    );
+}
+
+/* Update memory category navigation */
+
+function updateMemoryCategoryNavigation() {
+    memoryCategoryButtons.forEach((button) => {
+        const isActive = (
+            button.dataset.memoryFilter === activeMemoryCategory
+        );
+
+        button.classList.toggle("active", isActive);
+
+        button.setAttribute(
+            "aria-pressed",
+            String(isActive)
+        );
+    });
+}
+
+/* Update empty state */
+
+function updateMemoryEmptyState(total, visible) {
+    if (!memoryEmptyState) {
+        return;
+    }
+
+    const hasNoRecords = total === 0;
+    const hasNoMatches = total > 0 && visible === 0;
+
+    memoryEmptyState.hidden = !(
+        hasNoRecords || hasNoMatches
+    );
+
+    if (!memoryEmptyState.hidden) {
+        const emptyContent = hasNoRecords
+            ? DEFAULT_MEMORY_EMPTY_STATE
+            : FILTERED_MEMORY_EMPTY_STATE;
+
+        if (memoryEmptyTitle) {
+            memoryEmptyTitle.textContent = emptyContent.title;
+        }
+
+        if (memoryEmptyDescription) {
+            memoryEmptyDescription.textContent = (
+                emptyContent.description
+            );
+        }
+    }
+}
+
+/* Update memory counters */
+
+function updateMemoryCounters(total, visible) {
+    if (memoryTotalStat) {
+        memoryTotalStat.textContent = String(total);
+    }
+
+    if (memoryCount) {
+        memoryCount.textContent = (
+            `${visible} ${visible === 1 ? "RECORD" : "RECORDS"}`
+        );
+    }
+}
+
+/* Apply search and category filters */
+
+function filterMemoryCards() {
+    const cards = getMemoryCards();
+
+    const normalizedQuery = memorySearchQuery
+        .trim()
+        .toLowerCase();
+
+    let visibleCount = 0;
+
+    cards.forEach((card) => {
+        const category = (
+            card.dataset.memoryCategory || ""
+        ).toLowerCase();
+
+        const searchableContent = (
+            card.textContent || ""
+        ).toLowerCase();
+
+        const matchesCategory = (
+            activeMemoryCategory === "all" ||
+            category === activeMemoryCategory
+        );
+
+        const matchesSearch = (
+            !normalizedQuery ||
+            searchableContent.includes(normalizedQuery)
+        );
+
+        const isVisible = (
+            matchesCategory &&
+            matchesSearch
+        );
+
+        card.hidden = !isVisible;
+
+        if (isVisible) {
+            visibleCount += 1;
+        }
+    });
+
+    updateMemoryCategoryNavigation();
+
+    updateMemoryCounters(
+        cards.length,
+        visibleCount
+    );
+
+    updateMemoryEmptyState(
+        cards.length,
+        visibleCount
+    );
+
+    return {
+        total: cards.length,
+        visible: visibleCount,
+    };
+}
+
+/* Initialize memory search */
+
+function initializeMemorySearch() {
+    if (!memorySearchInput) {
+        return;
+    }
+
+    memorySearchInput.addEventListener("input", () => {
+        memorySearchQuery = memorySearchInput.value;
+
+        filterMemoryCards();
+    });
+}
+
+/* Initialize memory category filters */
+
+function initializeMemoryFilters() {
+    memoryCategoryButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const category = button.dataset.memoryFilter;
+
+            if (!category) {
+                return;
+            }
+
+            activeMemoryCategory = category;
+
+            filterMemoryCards();
+        });
+    });
+}
+
+/* Initialize memory interface */
+
+function initializeMemoryInterface() {
+    initializeMemorySearch();
+    initializeMemoryFilters();
+
+    filterMemoryCards();
+}
+
+/* Refresh after memory records are rendered */
+
+function refreshMemoryInterface() {
+    return filterMemoryCards();
 }
 
 /* =========================================
@@ -414,6 +741,8 @@ if (messageForm) {
 ========================================= */
 
 initializeNavigation();
+initializeSettingsNavigation();
+initializeMemoryInterface();
 
 window.addEventListener(
     "pywebviewready",
