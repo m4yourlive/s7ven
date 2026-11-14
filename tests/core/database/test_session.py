@@ -1,6 +1,7 @@
 """Tests for asynchronous database session management."""
 
 import pytest
+import pytest_asyncio
 from sqlalchemy import String, select
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -29,7 +30,7 @@ def database_config(tmp_path):
     )
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def session_manager(database_config):
     """Provide an initialized database session manager."""
     manager = DatabaseSessionManager(database_config)

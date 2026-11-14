@@ -27,6 +27,7 @@ dependencies = [
     "psutil>=6.0",
     "pystray>=0.19.5",
     "pillow>=13.0.0",
+    "alembic>=1.13",
 ]
 
 [project.scripts]

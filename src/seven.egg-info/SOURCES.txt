@@ -14,6 +14,14 @@ src/seven/core/config/__init__.py
 src/seven/core/config/config_manager.py
 src/seven/core/config/config_schema.py
 src/seven/core/config/exceptions.py
+src/seven/core/database/__init__.py
+src/seven/core/database/base.py
+src/seven/core/database/database_config.py
+src/seven/core/database/database_manager.py
+src/seven/core/database/exceptions.py
+src/seven/core/database/session.py
+src/seven/core/database/models/__init__.py
+src/seven/core/database/repositories/__init__.py
 src/seven/core/di/__init__.py
 src/seven/core/di/container.py
 src/seven/core/events/__init__.py
@@ -36,5 +44,6 @@ src/seven/gui/__init__.py
 src/seven/gui/application.py
 src/seven/gui/bridge.py
 src/seven/gui/tray.py
+src/seven/gui/tray_menu.py
 src/seven/gui/window.py
 src/seven/gui/frontend/assets/__init__.py
