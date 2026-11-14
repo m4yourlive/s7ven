@@ -1,3 +1,4 @@
+
 """S7VEN WebView application controller."""
 
 from __future__ import annotations
@@ -11,7 +12,6 @@ from seven.gui.window import WindowConfig, create_webview_window
 if TYPE_CHECKING:
     from seven.core.runtime.runtime_manager import RuntimeManager
     from seven.gui.tray import TrayController
-
 
 class WebViewApplication:
     """Manage the WebView application and runtime lifecycle."""
@@ -33,6 +33,7 @@ class WebViewApplication:
         self._started = False
         self._closed = False
         self._runtime_started_by_app = False
+        self._exit_requested = False
 
     @property
     def window(self) -> Any | None:
@@ -82,6 +83,40 @@ class WebViewApplication:
 
         return self._webview_api
 
+    def _on_window_closing(self, *_args: Any) -> bool | None:
+        """Hide the window when the user requests a close."""
+        if self._exit_requested or self._closed:
+            return None
+
+        tray = self._tray_controller
+
+        if tray is None or not tray.is_running:
+            return None
+
+        if self._window is not None:
+            self._window.hide()
+
+        return False
+
+
+    def _bind_window_events(self, window: Any) -> None:
+        """Register window lifecycle event handlers."""
+        events = getattr(window, "events", None)
+
+        if events is None:
+            return
+
+        closing_event = getattr(events, "closing", None)
+
+        if closing_event is None:
+            return
+
+        add_handler = getattr(type(closing_event), "__iadd__", None)
+
+        if callable(add_handler):
+            add_handler(closing_event, self._on_window_closing)
+
+
     def create_window(
         self,
         url: str | None = None,
@@ -97,7 +132,7 @@ class WebViewApplication:
         if url is None and html is None:
             url = self._get_frontend_url()
 
-        self._window = create_webview_window(
+        window = create_webview_window(
             webview_api=self._get_webview_api(),
             config=self.config,
             url=url,
@@ -105,10 +140,13 @@ class WebViewApplication:
             js_api=self.bridge,
         )
 
-        return self._window
+        self._window = window
+        self._bind_window_events(window)
+
+        return window
 
     def create_tray_controller(self) -> TrayController:
-        """Create the tray controller connected to the application window."""
+        """Create the tray controller connected to the application."""
         if self._tray_controller is None:
             from seven.gui.tray import TrayController
 
@@ -137,6 +175,16 @@ class WebViewApplication:
 
         show()
         return True
+
+    def _stop_tray(self) -> None:
+        """Stop the system tray when it supports shutdown."""
+        if self._tray_controller is None:
+            return
+
+        stop = getattr(self._tray_controller, "stop", None)
+
+        if callable(stop):
+            stop()
 
     def _stop_owned_runtime(self) -> None:
         """Stop the runtime only when this application started it."""
@@ -170,16 +218,26 @@ class WebViewApplication:
                 )
 
             self.create_window(url=url, html=html)
+
+            if self._tray_controller is not None:
+                self._tray_controller.start()
+
             self._started = True
             webview_api.start(debug=debug)
         finally:
+            self._exit_requested = True
             self._closed = True
+            self._stop_tray()
             self._stop_owned_runtime()
 
     def close(self) -> None:
-        """Close the application window."""
+        """Close the application and stop its background services."""
         if self._closed:
             return
+
+        self._exit_requested = True
+
+        self._stop_tray()
 
         if self._window is not None:
             self._window.destroy()

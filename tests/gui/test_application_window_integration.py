@@ -25,6 +25,7 @@ class FakeWindow:
         self.destroy_called = True
 
 
+
 class FakeTrayController:
     """Fake tray controller for integration tests."""
 
@@ -38,6 +39,13 @@ class FakeTrayController:
         self.on_show = on_show
         self.on_exit = on_exit
         self.title = title
+        self.is_running = False
+        self.stop_called = False
+
+    def stop(self) -> None:
+        self.stop_called = True
+        self.is_running = False
+
 
 
 def test_show_window_restores_and_shows_window() -> None:
