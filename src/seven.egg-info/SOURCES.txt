@@ -32,4 +32,9 @@ src/seven/core/settings/exceptions.py
 src/seven/core/settings/settings_manager.py
 src/seven/core/settings/settings_schema.py
 src/seven/core/settings/settings_store.py
+src/seven/gui/__init__.py
+src/seven/gui/application.py
+src/seven/gui/bridge.py
+src/seven/gui/tray.py
+src/seven/gui/window.py
 src/seven/gui/frontend/assets/__init__.py

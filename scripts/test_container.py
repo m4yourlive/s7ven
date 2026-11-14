@@ -1,13 +1,13 @@
+from seven.core.config import ConfigurationManager
 from seven.core.di import (
     SevenContainer,
     initialize_container,
     shutdown_container,
 )
-
-from seven.core.config import ConfigurationManager
-from seven.core.logging import LoggerService
 from seven.core.events import EventBus
+from seven.core.logging import LoggerService
 from seven.core.runtime import RuntimeManager, RuntimeState
+
 
 def main() -> None:
     container = SevenContainer()

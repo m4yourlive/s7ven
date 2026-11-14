@@ -19,6 +19,8 @@ Requires-Dist: SQLAlchemy>=2.0
 Requires-Dist: aiosqlite>=0.20
 Requires-Dist: openai>=1.0
 Requires-Dist: psutil>=6.0
+Requires-Dist: pystray>=0.19.5
+Requires-Dist: pillow>=13.0.0
 Dynamic: license-file
 
 # Seven — Personal Autonomous AI Companion
