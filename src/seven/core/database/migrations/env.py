@@ -8,7 +8,7 @@ from pathlib import Path
 
 from alembic import context
 from sqlalchemy import pool
-from sqlalchemy.engine import Connection
+from sqlalchemy.engine import Connection, make_url
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 import seven.core.database.models  # noqa: F401
@@ -32,19 +32,16 @@ def get_database_config() -> DatabaseConfig:
     database_url = config.attributes.get("database_url")
 
     if database_url is not None:
-        rendered_url = (
-            database_url.render_as_string(hide_password=False)
-            if hasattr(database_url, "render_as_string")
-            else str(database_url)
-        )
+        parsed_url = make_url(str(database_url))
 
-        from sqlalchemy.engine import make_url
+        if parsed_url.database is None:
+            raise ValueError("Database URL does not contain a database path.")
 
-        parsed_url = make_url(rendered_url)
+        database_path = Path(parsed_url.database)
 
         return DatabaseConfig(
-            data_directory=Path(parsed_url.database).parent,
-            database_name=Path(parsed_url.database).name,
+            data_directory=database_path.parent,
+            database_name=database_path.name,
         )
 
     return DatabaseConfig()
@@ -53,7 +50,7 @@ def get_database_config() -> DatabaseConfig:
 def get_database_url() -> str:
     """Resolve the asynchronous database URL."""
     return get_database_config().database_url.render_as_string(
-        hide_password=False
+        hide_password=False,
     )
 
 
@@ -113,7 +110,13 @@ async def run_async_migrations() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations using an asynchronous database connection."""
+    """Run migrations using an existing or new connection."""
+    connection = config.attributes.get("connection")
+
+    if connection is not None:
+        do_run_migrations(connection)
+        return
+
     asyncio.run(run_async_migrations())
 
 

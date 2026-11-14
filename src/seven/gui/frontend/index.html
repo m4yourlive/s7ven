@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,10 +7,7 @@
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
-    <meta
-        name="theme-color"
-        content="#ffffff"
-    >
+    <meta name="theme-color" content="#ffffff">
     <meta
         name="description"
         content="S7VEN - Your private AI companion."
@@ -17,35 +15,60 @@
 
     <title>S7VEN</title>
 
-    <link
-        rel="stylesheet"
-        href="assets/css/style.css"
-    >
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 
 <body>
-    <div class="app-container">
+    <div class="app-container" id="app-shell">
 
-        <aside class="sidebar">
+        <aside class="sidebar" aria-label="Main sidebar">
             <div class="brand">
                 <span class="brand-name">S7VEN<span>.</span></span>
                 <span class="brand-version">PERSONAL AI SYSTEM</span>
             </div>
 
-            <nav class="navigation">
-                <a href="#" class="nav-item active">
+            <nav class="navigation" aria-label="Main navigation">
+                <span class="navigation-heading">WORKSPACE</span>
+
+                <a
+                    href="#new-session"
+                    class="nav-item active"
+                    data-nav-target="new-session"
+                    aria-current="page"
+                >
                     <span class="nav-indicator"></span>
-                    <span>NEW SESSION</span>
+                    <span class="nav-label">NEW SESSION</span>
                 </a>
 
-                <a href="#" class="nav-item">
+                <a
+                    href="#conversations"
+                    class="nav-item"
+                    data-nav-target="conversations"
+                >
                     <span class="nav-indicator"></span>
-                    <span>CONVERSATIONS</span>
+                    <span class="nav-label">CONVERSATIONS</span>
                 </a>
 
-                <a href="#" class="nav-item">
+                <span class="navigation-heading navigation-heading-secondary">
+                    PERSONAL
+                </span>
+
+                <a
+                    href="#memory"
+                    class="nav-item"
+                    data-nav-target="memory"
+                >
                     <span class="nav-indicator"></span>
-                    <span>MEMORY</span>
+                    <span class="nav-label">MEMORY</span>
+                </a>
+
+                <a
+                    href="#settings"
+                    class="nav-item"
+                    data-nav-target="settings"
+                >
+                    <span class="nav-indicator"></span>
+                    <span class="nav-label">SETTINGS</span>
                 </a>
             </nav>
 
@@ -59,7 +82,8 @@
             </div>
         </aside>
 
-        <main class="main-content">
+        <main class="main-content" id="main-content">
+
             <header class="topbar">
                 <div class="topbar-label">
                     <span class="topbar-overline">WORKSPACE</span>
@@ -75,7 +99,13 @@
                 </button>
             </header>
 
-            <section class="workspace">
+            <!-- NEW SESSION PAGE -->
+            <section
+                class="workspace"
+                id="new-session-page"
+                data-page="new-session"
+                aria-label="Main workspace"
+            >
                 <div class="welcome-section">
                     <span class="section-label">
                         YOUR PERSONAL AI COMPANION
@@ -92,21 +122,47 @@
                     </p>
                 </div>
 
-                <div class="conversation-area" id="conversation">
+                <div
+                    class="conversation-area"
+                    id="conversation"
+                    aria-live="polite"
+                    aria-label="Conversation"
+                >
                     <div class="empty-state">
                         <span class="empty-state-mark">7</span>
                         <p>YOUR NEXT CONVERSATION STARTS HERE.</p>
                     </div>
                 </div>
 
-                <form class="composer" id="message-form">
-                    <textarea
-                        id="message-input"
-                        name="message"
-                        placeholder="Message S7VEN..."
-                        rows="1"
-                        aria-label="Message S7VEN"
-                    ></textarea>
+                <form
+                    class="composer"
+                    id="message-form"
+                    aria-label="Message composer"
+                >
+                    <div class="composer-input-wrapper">
+                        <textarea
+                            id="message-input"
+                            name="message"
+                            placeholder="Message S7VEN..."
+                            rows="1"
+                            maxlength="4000"
+                            aria-label="Message S7VEN"
+                            aria-describedby="composer-hint character-counter"
+                            autocomplete="off"
+                        ></textarea>
+
+                        <div class="composer-meta">
+                            <span id="composer-hint">
+                                ENTER TO SEND · SHIFT + ENTER FOR NEW LINE
+                            </span>
+
+                            <span
+                                id="character-counter"
+                                class="character-counter"
+                                aria-live="polite"
+                            >0 / 4000</span>
+                        </div>
+                    </div>
 
                     <button
                         class="send-button"
@@ -115,7 +171,7 @@
                         aria-label="Send message"
                         disabled
                     >
-                        <span>↑</span>
+                        <span class="send-button-icon" aria-hidden="true">↑</span>
                     </button>
                 </form>
 
@@ -124,8 +180,267 @@
                     <span>BUILT FOR YOU.</span>
                 </footer>
             </section>
-        </main>
 
+            <!-- SETTINGS PAGE -->
+            <section
+                class="workspace settings-page page"
+                id="settings-page"
+                data-page="settings"
+                aria-label="Application settings"
+                hidden
+            >
+                <div class="settings-header">
+                    <div>
+                        <span class="section-label">CONFIGURATION</span>
+                        <h1 class="settings-title">SETTINGS<span>.</span></h1>
+                        <p class="settings-description">
+                            Configure your personal S7VEN experience.
+                        </p>
+                    </div>
+
+                    <span class="settings-version">SYSTEM / 001</span>
+                </div>
+
+                <div class="settings-layout">
+
+                    <nav
+                        class="settings-navigation"
+                        aria-label="Settings categories"
+                    >
+                        <a
+                            href="#general"
+                            class="settings-nav-item active"
+                            data-settings-target="general"
+                            aria-current="true"
+                        >GENERAL</a>
+
+                        <a
+                            href="#appearance"
+                            class="settings-nav-item"
+                            data-settings-target="appearance"
+                        >APPEARANCE</a>
+
+                        <a
+                            href="#system"
+                            class="settings-nav-item"
+                            data-settings-target="system"
+                        >SYSTEM</a>
+                    </nav>
+
+                    <div class="settings-content">
+
+                        <!-- GENERAL -->
+                        <section
+                            class="settings-section"
+                            id="general-settings"
+                            data-settings-section="general"
+                        >
+                            <div class="settings-section-heading">
+                                <span class="settings-section-index">01</span>
+                                <div>
+                                    <h2>GENERAL</h2>
+                                    <p>Basic application preferences.</p>
+                                </div>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="setting-info">
+                                        <label for="language-setting">
+                                            LANGUAGE
+                                        </label>
+                                        <p>
+                                            Choose your preferred interface
+                                            language.
+                                        </p>
+                                    </div>
+
+                                    <select
+                                        id="language-setting"
+                                        name="language"
+                                    >
+                                        <option value="en">English</option>
+                                        <option value="id">Bahasa Indonesia</option>
+                                    </select>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-info">
+                                        <label for="startup-setting">
+                                            LAUNCH ON STARTUP
+                                        </label>
+                                        <p>
+                                            Start S7VEN when your computer
+                                            starts.
+                                        </p>
+                                    </div>
+
+                                    <input
+                                        type="checkbox"
+                                        id="startup-setting"
+                                        name="launch_on_startup"
+                                    >
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- APPEARANCE -->
+                        <section
+                            class="settings-section"
+                            id="appearance-settings"
+                            data-settings-section="appearance"
+                            hidden
+                        >
+                            <div class="settings-section-heading">
+                                <span class="settings-section-index">02</span>
+                                <div>
+                                    <h2>APPEARANCE</h2>
+                                    <p>Personalize your visual experience.</p>
+                                </div>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="setting-info">
+                                        <label for="theme-setting">
+                                            INTERFACE THEME
+                                        </label>
+                                        <p>
+                                            Select the application color theme.
+                                        </p>
+                                    </div>
+
+                                    <select
+                                        id="theme-setting"
+                                        name="theme"
+                                    >
+                                        <option value="light">Light</option>
+                                        <option value="dark">Dark</option>
+                                        <option value="system">System Default</option>
+                                    </select>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-info">
+                                        <label for="font-size-setting">
+                                            TEXT SIZE
+                                        </label>
+                                        <p>
+                                            Adjust the interface text size.
+                                        </p>
+                                    </div>
+
+                                    <select
+                                        id="font-size-setting"
+                                        name="font_size"
+                                    >
+                                        <option value="small">Small</option>
+                                        <option value="medium" selected>
+                                            Medium
+                                        </option>
+                                        <option value="large">Large</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- SYSTEM -->
+                        <section
+                            class="settings-section"
+                            id="system-settings"
+                            data-settings-section="system"
+                            hidden
+                        >
+                            <div class="settings-section-heading">
+                                <span class="settings-section-index">03</span>
+                                <div>
+                                    <h2>SYSTEM</h2>
+                                    <p>Application information and status.</p>
+                                </div>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="setting-info">
+                                        <span class="setting-label">
+                                            APPLICATION
+                                        </span>
+                                        <p>S7VEN Personal AI System</p>
+                                    </div>
+
+                                    <span class="setting-value">
+                                        S7VEN
+                                    </span>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-info">
+                                        <span class="setting-label">
+                                            VERSION
+                                        </span>
+                                        <p>Current application build.</p>
+                                    </div>
+
+                                    <span class="setting-value">
+                                        BUILD 001
+                                    </span>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-info">
+                                        <span class="setting-label">
+                                            RUNTIME STATUS
+                                        </span>
+                                        <p>Python backend connection.</p>
+                                    </div>
+
+                                    <span
+                                        class="setting-value"
+                                        id="settings-runtime-status"
+                                    >
+                                        INITIALIZING
+                                    </span>
+                                </div>
+                            </div>
+                        </section>
+
+                    </div>
+                </div>
+
+                <div class="settings-actions">
+                    <button
+                        type="button"
+                        class="settings-reset-button"
+                        id="settings-reset"
+                    >
+                        RESET TO DEFAULTS
+                    </button>
+
+                    <div class="settings-save-group">
+                        <span
+                            class="settings-save-status"
+                            id="settings-save-status"
+                            aria-live="polite"
+                        >UNSAVED CHANGES</span>
+
+                        <button
+                            type="button"
+                            class="settings-save-button"
+                            id="settings-save"
+                            disabled
+                        >
+                            SAVE CHANGES
+                        </button>
+                    </div>
+                </div>
+
+                <footer class="workspace-footer">
+                    <span>S7VEN IS A PRIVATE AI SYSTEM.</span>
+                    <span>BUILT FOR YOU.</span>
+                </footer>
+            </section>
+
+        </main>
     </div>
 
     <script src="assets/js/app.js"></script>

@@ -49,8 +49,8 @@ class DatabaseConfig:
 
     @property
     def database_url(self) -> URL:
-        """Return the SQLAlchemy asynchronous SQLite URL."""
+        """Return the asynchronous SQLite database URL."""
         return URL.create(
             drivername="sqlite+aiosqlite",
-            database=str(self.database_path),
+            database=self.database_path.as_posix(),
         )

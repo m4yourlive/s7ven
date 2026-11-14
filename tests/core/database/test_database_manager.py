@@ -1,24 +1,11 @@
-"""Tests for database lifecycle management."""
+"""Tests for database lifecycle and migration management."""
+
+import sqlite3
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import String, inspect
-from sqlalchemy.orm import Mapped, mapped_column
 
-from seven.core.database import (
-    Base,
-    DatabaseConfig,
-    DatabaseManager,
-)
-
-
-class DatabaseManagerTestModel(Base):
-    """Test model for database initialization."""
-
-    __tablename__ = "test_database_manager_model"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+from seven.core.database import DatabaseConfig, DatabaseManager
 
 
 @pytest.fixture
@@ -85,17 +72,17 @@ async def test_initialize_creates_database_file(
 
 
 @pytest.mark.asyncio
-async def test_initialize_creates_registered_tables(
+async def test_initialize_applies_alembic_migration(
     database_manager,
+    database_config,
 ) -> None:
-    async with database_manager.engine.connect() as connection:
-        table_names = await connection.run_sync(
-            lambda sync_connection: inspect(
-                sync_connection
-            ).get_table_names()
-        )
+    with sqlite3.connect(database_config.database_path) as connection:
+        result = connection.execute(
+            "SELECT version_num FROM alembic_version"
+        ).fetchone()
 
-    assert "test_database_manager_model" in table_names
+    assert result is not None
+    assert result[0] == "0001_initial"
 
 
 @pytest.mark.asyncio
@@ -142,3 +129,12 @@ async def test_manager_can_reinitialize_after_dispose(
 
     assert database_manager.is_initialized is True
     assert database_manager.session_manager.is_initialized is True
+
+    with sqlite3.connect(
+        database_manager.config.database_path
+    ) as connection:
+        result = connection.execute(
+            "SELECT version_num FROM alembic_version"
+        ).fetchone()
+
+    assert result[0] == "0001_initial"

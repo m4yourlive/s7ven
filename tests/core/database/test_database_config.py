@@ -58,9 +58,9 @@ def test_database_url_uses_async_sqlite_driver(
     )
 
     assert config.database_url.drivername == "sqlite+aiosqlite"
-    assert config.database_url.database == str(
+    assert config.database_url.database == (
         tmp_path / "seven.db"
-    )
+    ).resolve().as_posix()
 
 
 def test_database_config_rejects_empty_name() -> None:

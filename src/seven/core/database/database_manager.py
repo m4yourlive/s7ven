@@ -1,10 +1,14 @@
-"""Database lifecycle and schema initialization."""
+"""Database lifecycle and migration management."""
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
+from alembic import command
+from alembic.config import Config
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from seven.core.database.base import Base
 from seven.core.database.database_config import DatabaseConfig
 from seven.core.database.session import DatabaseSessionManager
 
@@ -46,22 +50,52 @@ class DatabaseManager:
         """Return whether the database is initialized."""
         return self._initialized
 
+    @staticmethod
+    def _get_alembic_config() -> Config:
+        """Load the project's Alembic configuration."""
+        project_root = Path(__file__).resolve().parents[4]
+        config_path = project_root / "alembic.ini"
+
+        if not config_path.is_file():
+            raise FileNotFoundError(
+                f"Alembic configuration not found: {config_path}"
+            )
+
+        return Config(str(config_path))
+
+
+    @staticmethod
+    def _run_upgrade(
+        connection: Any,
+        alembic_config: Config,
+    ) -> None:
+        """Execute Alembic upgrade using an existing connection."""
+        alembic_config.attributes["connection"] = connection
+        command.upgrade(alembic_config, "head")
+
     async def initialize(self) -> None:
-        """Initialize the database and create missing tables."""
+        """Initialize the database and apply pending migrations."""
         if self._initialized:
             return
 
         await self._session_manager.initialize()
 
         try:
-            async with self.engine.begin() as connection:
-                await connection.run_sync(Base.metadata.create_all)
+            alembic_config = self._get_alembic_config()
+            alembic_config.attributes["database_config"] = self._config
+
+            async with self.engine.connect() as connection:
+                await connection.run_sync(
+                    self._run_upgrade,
+                    alembic_config,
+                )
 
             self._initialized = True
 
         except Exception:
             await self._session_manager.dispose()
             raise
+
 
     async def dispose(self) -> None:
         """Release database resources."""
