@@ -1,18 +1,20 @@
+
 /* =========================================================
    S7VEN DESIGN SYSTEM
-   Design tokens  ·  v2 (Home dashboard redesign)
-   Semua nama token lama dipertahankan; hanya nilainya yang
-   diperbarui. Token baru ada di bagian "NEW".
-   ========================================================= */
+   Design Tokens v2.2
+   Centralized design system for all frontend pages.
+========================================================= */
 
 :root {
-    /* COLORS */
+    /* =========================================
+       COLORS
+    ========================================= */
+
     --color-background: #f3f3f4;
     --color-surface: #ffffff;
     --color-surface-hover: #f1f1f2;
 
     --color-primary: #141414;
-    --color-primary: #171717;
     --color-secondary: #666666;
     --color-muted: #a3a3a3;
 
@@ -22,35 +24,30 @@
     --color-accent: #ff2d2d;
     --color-accent-hover: #e62626;
     --color-accent-muted: rgba(255, 45, 45, 0.1);
-
-    --color-white: #ffffff;
-    --color-black: #000000;
-    
-
-    :root {
-    /* Required color tokens */
-    --color-background: #ffffff;
-
-    /* Required layout tokens */
-    --sidebar-width: 250px;
-    }
-    
-    /* COLORS — NEW */
     --color-accent-soft: rgba(255, 45, 45, 0.06);
     --color-accent-ring: rgba(255, 45, 45, 0.28);
+
     --color-success: #1fb55a;
     --color-success-muted: rgba(31, 181, 90, 0.12);
 
+    --color-white: #ffffff;
+    --color-black: #000000;
+
+    /* Dark surfaces */
     --color-surface-dark: #151515;
     --color-surface-dark-hover: #242424;
+
     --color-text-on-dark: #f5f5f5;
     --color-text-on-dark-muted: #9b9b9b;
     --color-border-on-dark: #2e2e2e;
 
-    /* TYPOGRAPHY */
+    /* =========================================
+       TYPOGRAPHY
+    ========================================= */
+
     --font-heading: "Press Start 2P", monospace;
+    --font-display: "Space Mono", monospace;
     --font-body: "Share Tech Mono", monospace;
-    --font-display: "Space Mono", "Share Tech Mono", monospace; /* NEW */
 
     --font-size-xs: 10px;
     --font-size-sm: 12px;
@@ -66,7 +63,10 @@
     --line-height-normal: 1.6;
     --line-height-relaxed: 1.8;
 
-    /* SPACING */
+    /* =========================================
+       SPACING
+    ========================================= */
+
     --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
@@ -78,16 +78,22 @@
     --space-12: 48px;
     --space-16: 64px;
 
-    /* LAYOUT */
+    /* =========================================
+       LAYOUT
+    ========================================= */
+
     --sidebar-width: 230px;
     --content-max-width: 1050px;
-    --dashboard-max-width: 1380px;   /* NEW */
-    --side-panel-width: 340px;       /* NEW */
+    --dashboard-max-width: 1380px;
+    --side-panel-width: 340px;
 
     --header-height: 64px;
     --composer-min-height: 68px;
 
-    /* BORDERS */
+    /* =========================================
+       BORDERS & RADIUS
+    ========================================= */
+
     --border-width: 1px;
     --border-style: solid;
 
@@ -95,20 +101,32 @@
     --radius-sm: 4px;
     --radius-md: 8px;
     --radius-lg: 14px;
-    --radius-xl: 20px;               /* NEW */
+    --radius-xl: 20px;
     --radius-full: 999px;
 
-    /* SHADOWS */
+    /* =========================================
+       SHADOWS
+    ========================================= */
+
     --shadow-none: none;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.06);
-    --shadow-glow: 0 0 0 1px var(--color-accent-ring), 0 8px 24px rgba(255, 45, 45, 0.18); /* NEW */
 
-    /* TRANSITIONS */
+    --shadow-glow:
+        0 0 0 1px var(--color-accent-ring),
+        0 8px 24px rgba(255, 45, 45, 0.18);
+
+    /* =========================================
+       TRANSITIONS
+    ========================================= */
+
     --transition-fast: 150ms ease;
     --transition-normal: 250ms ease;
 
-    /* LAYERS */
+    /* =========================================
+       LAYERS
+    ========================================= */
+
     --z-base: 1;
     --z-dropdown: 10;
     --z-overlay: 100;

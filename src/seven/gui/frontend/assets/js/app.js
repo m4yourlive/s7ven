@@ -46,6 +46,7 @@ const topbarOverline = document.querySelector(".topbar-overline");
 
 let bridgeReady = false;
 let isProcessing = false;
+let bridgeInitializationPromise = null;
 
 /* =========================================
    PAGE NAVIGATION
@@ -82,7 +83,12 @@ function setActiveNavigation(target) {
     );
 
     if (!selectedItem) {
-        return;
+        return false;
+    }
+
+    // Validate and activate the page first.
+    if (!setActivePage(target)) {
+        return false;
     }
 
     navigationItems.forEach((item) => {
@@ -105,7 +111,7 @@ function setActiveNavigation(target) {
         }
     }
 
-    setActivePage(target);
+    return true;
 }
 
 function initializeNavigation() {
@@ -610,35 +616,64 @@ function appendMessage(content, sender) {
 ========================================= */
 
 async function initializeBridge() {
-    try {
-        const api = window.pywebview?.api;
-
-        if (!api) {
-            throw new Error("Python bridge is unavailable.");
-        }
-
-        const result = await api.ping();
-
-        if (!result.success) {
-            throw new Error("Python bridge connection failed.");
-        }
-
-        const appInfo = await api.get_app_info();
-
-        bridgeReady = true;
-
-        updateSystemStatus(`${appInfo.name} CONNECTED`);
-        updateComposer();
-
-        console.info("S7VEN Python bridge connected.");
-    } catch (error) {
-        bridgeReady = false;
-
-        updateSystemStatus("BRIDGE UNAVAILABLE");
-        updateComposer();
-
-        console.error("Bridge initialization failed:", error);
+    if (bridgeInitializationPromise) {
+        return bridgeInitializationPromise;
     }
+
+    bridgeInitializationPromise = (async () => {
+        try {
+            const api = window.pywebview?.api;
+
+            if (
+                !api ||
+                typeof api.ping !== "function" ||
+                typeof api.get_app_info !== "function"
+            ) {
+                throw new Error("Python bridge is unavailable.");
+            }
+
+            const result = await api.ping();
+
+            if (!result?.success) {
+                throw new Error(
+                    "Python bridge connection failed."
+                );
+            }
+
+            const appInfo = await api.get_app_info();
+
+            if (!appInfo || typeof appInfo.name !== "string") {
+                throw new Error(
+                    "Invalid application information received."
+                );
+            }
+
+            bridgeReady = true;
+
+            updateSystemStatus(`${appInfo.name} CONNECTED`);
+            updateComposer();
+
+            console.info("S7VEN Python bridge connected.");
+
+            return true;
+        } catch (error) {
+            bridgeReady = false;
+
+            updateSystemStatus("BRIDGE UNAVAILABLE");
+            updateComposer();
+
+            console.error(
+                "Bridge initialization failed:",
+                error
+            );
+
+            return false;
+        } finally {
+            bridgeInitializationPromise = null;
+        }
+    })();
+
+    return bridgeInitializationPromise;
 }
 
 /* =========================================
@@ -715,18 +750,23 @@ if (messageInput) {
     messageInput.addEventListener("input", updateComposer);
 
     messageInput.addEventListener("keydown", (event) => {
-        if (
-            event.key === "Enter" &&
-            !event.shiftKey &&
-            !event.isComposing
-        ) {
-            event.preventDefault();
+    if (
+        event.key === "Enter" &&
+        !event.shiftKey &&
+        !event.isComposing
+    ) {
+        event.preventDefault();
 
-            if (sendButton && !sendButton.disabled) {
-                messageForm.requestSubmit();
-            }
+        if (
+            messageForm &&
+            sendButton &&
+            !sendButton.disabled
+        ) {
+            messageForm.requestSubmit();
         }
-    });
+    }
+});
+
 }
 
 if (messageForm) {
@@ -746,7 +786,13 @@ initializeMemoryInterface();
 
 window.addEventListener(
     "pywebviewready",
-    initializeBridge
+    initializeBridge,
+    { once: true }
 );
+
+// Handle cases where the bridge is already available.
+if (window.pywebview?.api) {
+    initializeBridge();
+}
 
 updateComposer();
