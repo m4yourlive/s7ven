@@ -30,6 +30,7 @@ class AIMessage:
             raise ValueError("Message content cannot be empty.")
 
 
+
 @dataclass(frozen=True, slots=True)
 class GenerationRequest:
     """Input parameters for an AI generation request."""
@@ -40,12 +41,17 @@ class GenerationRequest:
     max_tokens: int | None = None
     metadata: dict[str, str] = field(default_factory=dict)
 
-    def __post_init__(self) -> None:
-        if not self.messages:
-            raise ValueError("At least one message is required.")
+    # Advanced generation parameters
+    top_p: float = 1.0
+    frequency_penalty: float = 0.0
+    presence_penalty: float = 0.0
 
+    def __post_init__(self) -> None:
         if not isinstance(self.messages, tuple):
             raise TypeError("messages must be a tuple.")
+
+        if not self.messages:
+            raise ValueError("At least one message is required.")
 
         if not all(
             isinstance(message, AIMessage)
@@ -61,6 +67,19 @@ class GenerationRequest:
 
         if self.max_tokens is not None and self.max_tokens < 1:
             raise ValueError("max_tokens must be greater than zero.")
+
+        if not 0.0 < self.top_p <= 1.0:
+            raise ValueError("top_p must be greater than 0 and at most 1.")
+
+        if not -2.0 <= self.frequency_penalty <= 2.0:
+            raise ValueError(
+                "frequency_penalty must be between -2.0 and 2.0."
+            )
+
+        if not -2.0 <= self.presence_penalty <= 2.0:
+            raise ValueError(
+                "presence_penalty must be between -2.0 and 2.0."
+            )
 
 
 @dataclass(frozen=True, slots=True)
