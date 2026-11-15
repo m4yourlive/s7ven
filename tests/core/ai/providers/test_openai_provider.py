@@ -165,3 +165,123 @@ def test_provider_rejects_invalid_timeout():
             api_key="test-api-key",
             timeout=0,
         )
+
+
+@pytest.mark.asyncio
+async def test_stream_closes_after_iteration_error(
+    provider,
+    generation_request,
+):
+    mock_stream = MagicMock()
+    mock_stream.close = AsyncMock()
+
+    async def failing_iterator():
+        yield SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    delta=SimpleNamespace(content="Hello")
+                )
+            ]
+        )
+        raise RuntimeError("Stream connection interrupted.")
+
+    mock_stream.__aiter__.side_effect = failing_iterator
+
+    provider._client.chat.completions.create = AsyncMock(
+        return_value=mock_stream
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="Stream connection interrupted.",
+    ):
+        async for _ in provider.stream(generation_request):
+            pass
+
+    mock_stream.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_stream_closes_when_cancelled(
+    provider,
+    generation_request,
+):
+    mock_stream = MagicMock()
+    mock_stream.__aiter__.return_value = iter([
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    delta=SimpleNamespace(content="Hello")
+                )
+            ]
+        ),
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    delta=SimpleNamespace(content="Seven")
+                )
+            ]
+        ),
+    ])
+    mock_stream.close = AsyncMock()
+
+    provider._client.chat.completions.create = AsyncMock(
+        return_value=mock_stream
+    )
+
+    stream = provider.stream(generation_request)
+
+    first_chunk = await anext(stream)
+
+    assert first_chunk == "Hello"
+
+    await stream.aclose()
+
+    mock_stream.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_stream_ignores_empty_chunks(
+    provider,
+    generation_request,
+):
+    chunks = [
+        SimpleNamespace(choices=[]),
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    delta=SimpleNamespace(content=None)
+                )
+            ]
+        ),
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    delta=SimpleNamespace(content="")
+                )
+            ]
+        ),
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    delta=SimpleNamespace(content="Seven!")
+                )
+            ]
+        ),
+    ]
+
+    mock_stream = MagicMock()
+    mock_stream.__aiter__.return_value = iter(chunks)
+    mock_stream.close = AsyncMock()
+
+    provider._client.chat.completions.create = AsyncMock(
+        return_value=mock_stream
+    )
+
+    result = [
+        chunk
+        async for chunk in provider.stream(generation_request)
+    ]
+
+    assert result == ["Seven!"]
+    mock_stream.close.assert_awaited_once()

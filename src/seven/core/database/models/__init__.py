@@ -1,5 +1,11 @@
-"""Database model registry.
+"""Database model registry."""
 
-Application-specific models will be imported here as they are implemented.
-"""
+from seven.core.database.models.conversation import Conversation
+from seven.core.database.models.message import Message
+from seven.core.database.models.memory import Memory
 
+__all__ = [
+    "Conversation",
+    "Message",
+    "Memory",
+]

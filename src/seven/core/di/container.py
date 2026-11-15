@@ -1,52 +1,77 @@
+
 """Dependency injection container for S7VEN."""
 
 from pathlib import Path
 
 from dependency_injector import containers, providers
 
+from seven.core.ai.context_manager import ConversationContextManager
 from seven.core.ai.engine import AIEngine
 from seven.core.ai.exceptions import AIConfigurationError
-from seven.core.ai.request_factory import GenerationRequestFactory
+from seven.core.ai.pipeline import AIResponsePipeline
+from seven.core.ai.prompts import DEFAULT_PROMPTS, PromptManager
 from seven.core.ai.providers import ProviderRegistry
 from seven.core.ai.providers.openai_provider import OpenAIProvider
+from seven.core.ai.request_factory import GenerationRequestFactory
+
 from seven.core.config import AppConfig, ConfigurationManager
 from seven.core.config.config_schema import AIConfig
+
+from seven.core.conversations import (
+    ConversationService,
+    MemoryConsolidator,
+    MemoryService,
+    MessageService,
+)
+
+from seven.core.database import DatabaseConfig, DatabaseSessionManager
+from seven.core.database.repositories import (
+    ConversationRepository,
+    MessageRepository,
+    MemoryRepository,
+)
+
 from seven.core.events import EventBus
 from seven.core.logging import LoggerConfig, LoggerService
 from seven.core.runtime import RuntimeManager
 from seven.core.settings.settings_manager import SettingsManager
 from seven.core.settings.settings_store import SettingsStore
-from seven.core.ai.prompts import (
-    DEFAULT_PROMPTS,
-    PromptManager,
-)
 
-from seven.core.ai.pipeline import AIResponsePipeline
 
 def create_logger_config(
     config_manager: ConfigurationManager,
 ) -> LoggerConfig:
+    """Create logger configuration."""
     config = config_manager.config
 
     return LoggerConfig(level=config.runtime.log_level)
 
 
 def create_event_logger(logger_service: LoggerService):
+    """Create the EventBus logger."""
     return logger_service.get_logger("EventBus")
 
 
 def create_ai_config(
     config_manager: ConfigurationManager,
 ) -> AIConfig:
-    """Retrieve AI configuration from the configuration manager."""
+    """Retrieve AI configuration."""
     return config_manager.config.ai
+
+
+def create_database_config(
+    config_manager: ConfigurationManager,
+) -> DatabaseConfig:
+    """Create database configuration from application settings."""
+    return DatabaseConfig.from_storage_config(
+        config_manager.config.storage,
+    )
 
 
 def create_openai_provider(
     config_manager: ConfigurationManager,
 ) -> OpenAIProvider:
     """Create OpenAI provider from application configuration."""
-
     config = config_manager.config.ai
 
     if config.provider.lower() != "openai":
@@ -72,7 +97,6 @@ def create_provider_registry(
     openai_provider: OpenAIProvider,
 ) -> ProviderRegistry:
     """Create registry and register available AI providers."""
-
     registry = ProviderRegistry()
     registry.register(openai_provider)
 
@@ -82,6 +106,7 @@ def create_provider_registry(
 class SevenContainer(containers.DeclarativeContainer):
     """Central dependency injection container for Seven."""
 
+    # Configuration
     config_manager = providers.Singleton(
         ConfigurationManager,
         config_path=Path("configs/app.yaml"),
@@ -89,6 +114,7 @@ class SevenContainer(containers.DeclarativeContainer):
         dotenv_path=Path(".env"),
     )
 
+    # Logging and Events
     logger_service = providers.Singleton(
         LoggerService,
         config=providers.Callable(
@@ -105,6 +131,7 @@ class SevenContainer(containers.DeclarativeContainer):
         ),
     )
 
+    # Settings
     settings_store = providers.Singleton(
         SettingsStore,
         path=Path("configs/settings.json"),
@@ -116,11 +143,56 @@ class SevenContainer(containers.DeclarativeContainer):
         event_bus=event_bus,
     )
 
+    # Database
+    database_config = providers.Singleton(
+        create_database_config,
+        config_manager,
+    )
+
+    database_session_manager = providers.Singleton(
+        DatabaseSessionManager,
+        config=database_config,
+    )
+
+    # Repositories
+    conversation_repository = providers.Factory(
+        ConversationRepository,
+    )
+
+    message_repository = providers.Factory(
+        MessageRepository,
+    )
+
+    memory_repository = providers.Factory(
+        MemoryRepository,
+    )
+
+    # Conversation and Memory Services
+    conversation_service = providers.Factory(
+        ConversationService,
+    )
+
+    message_service = providers.Factory(
+        MessageService,
+    )
+
+    memory_service = providers.Factory(
+        MemoryService,
+    )
+
+    memory_consolidator = providers.Factory(
+        MemoryConsolidator,
+        message_service=message_service,
+        memory_service=memory_service,
+    )
+
+    # AI Configuration
     ai_config = providers.Singleton(
         create_ai_config,
         config_manager,
     )
 
+    # AI Providers
     openai_provider = providers.Singleton(
         create_openai_provider,
         config_manager,
@@ -131,7 +203,7 @@ class SevenContainer(containers.DeclarativeContainer):
         openai_provider=openai_provider,
     )
 
-        # Prompt Manager
+    # Prompt Management
     prompt_manager = providers.Singleton(
         PromptManager,
         templates=DEFAULT_PROMPTS,
@@ -143,18 +215,25 @@ class SevenContainer(containers.DeclarativeContainer):
         prompt_manager=prompt_manager,
     )
 
+    # AI Engine
     ai_engine = providers.Singleton(
         AIEngine,
         provider=openai_provider,
     )
 
-        # AI Response Pipeline
+    conversation_context_manager = providers.Singleton(
+        ConversationContextManager,
+        max_messages=20,
+    )
+
     ai_pipeline = providers.Singleton(
         AIResponsePipeline,
         engine=ai_engine,
         request_factory=generation_request_factory,
+        context_manager=conversation_context_manager,
     )
 
+    # Runtime
     runtime_manager = providers.Singleton(
         RuntimeManager,
         config_manager=config_manager,
@@ -173,14 +252,27 @@ def initialize_container(container: SevenContainer) -> None:
 
 
 def shutdown_container(container: SevenContainer) -> None:
-    """Stop Seven and release initialized AI resources."""
+    """Stop Seven and release initialized resources."""
     import asyncio
 
-    try:
+    async def close_resources() -> None:
         ai_engine_provider = getattr(container, "ai_engine", None)
 
         if ai_engine_provider is not None:
             engine = ai_engine_provider()
-            asyncio.run(engine.close())
+            await engine.close()
+
+        database_provider = getattr(
+            container,
+            "database_session_manager",
+            None,
+        )
+
+        if database_provider is not None:
+            manager = database_provider()
+            await manager.dispose()
+
+    try:
+        asyncio.run(close_resources())
     finally:
         container.runtime_manager().stop()

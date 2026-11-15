@@ -1,3 +1,4 @@
+
 """Tests for database lifecycle and migration management."""
 
 import sqlite3
@@ -6,6 +7,9 @@ import pytest
 import pytest_asyncio
 
 from seven.core.database import DatabaseConfig, DatabaseManager
+
+
+EXPECTED_MIGRATION_REVISION = "f9c7d82df6b4"
 
 
 @pytest.fixture
@@ -82,7 +86,7 @@ async def test_initialize_applies_alembic_migration(
         ).fetchone()
 
     assert result is not None
-    assert result[0] == "0001_initial"
+    assert result[0] == EXPECTED_MIGRATION_REVISION
 
 
 @pytest.mark.asyncio
@@ -137,4 +141,5 @@ async def test_manager_can_reinitialize_after_dispose(
             "SELECT version_num FROM alembic_version"
         ).fetchone()
 
-    assert result[0] == "0001_initial"
+    assert result is not None
+    assert result[0] == EXPECTED_MIGRATION_REVISION
