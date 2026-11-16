@@ -40,6 +40,9 @@ const settingsSections = document.querySelectorAll(
 const topbarTitle = document.querySelector(".topbar-title");
 const topbarOverline = document.querySelector(".topbar-overline");
 
+const voiceButton = document.getElementById("voice-button");
+const voiceStatus = document.getElementById("voice-status");
+
 /* =========================================
    APPLICATION STATE
 ========================================= */
@@ -47,6 +50,12 @@ const topbarOverline = document.querySelector(".topbar-overline");
 let bridgeReady = false;
 let isProcessing = false;
 let bridgeInitializationPromise = null;
+let mediaRecorder = null;
+let audioStream = null;
+let audioChunks = [];
+let isRecording = false;
+let isVoiceProcessing = false;
+let currentVoiceAudio = null;
 
 /* =========================================
    PAGE NAVIGATION
@@ -676,6 +685,268 @@ async function initializeBridge() {
     return bridgeInitializationPromise;
 }
 
+
+/* =========================================
+   VOICE RECORDING
+========================================= */
+
+function updateVoiceStatus(status) {
+    if (!voiceStatus) {
+        return;
+    }
+
+    const textNode = Array.from(voiceStatus.childNodes).find(
+        (node) => node.nodeType === Node.TEXT_NODE &&
+            node.textContent.trim()
+    );
+
+    if (textNode) {
+        textNode.textContent = ` ${status}`;
+    }
+}
+
+function updateVoiceButton(recording) {
+    if (!voiceButton) {
+        return;
+    }
+
+    voiceButton.classList.toggle("is-recording", recording);
+    voiceButton.setAttribute("aria-pressed", String(recording));
+    voiceButton.setAttribute(
+        "aria-label",
+        recording ? "Stop voice recording" : "Start voice recording"
+    );
+
+    voiceButton.title = recording
+        ? "Stop recording"
+        : "Push to talk";
+}
+
+
+async function startVoiceRecording() {
+    if (!bridgeReady) {
+        updateVoiceStatus("Bridge unavailable");
+        console.error("Voice recording blocked: Python bridge is not ready.");
+        return;
+    }
+
+    if (isProcessing || isVoiceProcessing || isRecording) {
+        return;
+    }
+
+    try {
+        updateVoiceStatus("Checking voice settings...");
+
+        const api = window.pywebview?.api;
+
+        if (!api || typeof api.get_voice_settings !== "function") {
+            throw new Error("Voice settings API is unavailable.");
+        }
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+            throw new Error("Audio recording is not supported.");
+        }
+
+        if (!window.MediaRecorder) {
+            throw new Error("MediaRecorder is not supported.");
+        }
+
+        const settings = await api.get_voice_settings();
+
+        if (!settings?.success) {
+            throw new Error(settings?.error || "Unable to load voice settings.");
+        }
+
+        if (!settings.enabled || !settings.input_enabled) {
+            throw new Error("Voice input is disabled in settings.");
+        }
+
+        audioStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+        });
+
+        const mimeType = MediaRecorder.isTypeSupported(
+            "audio/webm;codecs=opus"
+        )
+            ? "audio/webm;codecs=opus"
+            : "audio/webm";
+
+        mediaRecorder = new MediaRecorder(audioStream, { mimeType });
+        audioChunks = [];
+
+        mediaRecorder.addEventListener("dataavailable", (event) => {
+            if (event.data.size > 0) {
+                audioChunks.push(event.data);
+            }
+        });
+
+        mediaRecorder.addEventListener(
+            "stop",
+            handleVoiceRecordingStop,
+            { once: true }
+        );
+
+        mediaRecorder.start();
+
+        isRecording = true;
+        updateVoiceButton(true);
+        updateVoiceStatus("Listening...");
+        updateSystemStatus("VOICE RECORDING");
+
+    } catch (error) {
+        stopAudioStream();
+        updateVoiceButton(false);
+        updateVoiceStatus(error.message || "Voice error");
+        updateSystemStatus("VOICE ERROR");
+
+        console.error("Voice recording failed:", error);
+    }
+}
+
+function stopAudioStream() {
+    if (audioStream) {
+        audioStream.getTracks().forEach((track) => track.stop());
+        audioStream = null;
+    }
+}
+
+function stopVoiceRecording() {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        return;
+    }
+
+    isRecording = false;
+    updateVoiceButton(false);
+    updateVoiceStatus("Processing audio...");
+
+    mediaRecorder.stop();
+    stopAudioStream();
+}
+
+async function playVoiceAudio(base64Audio, audioFormat = "mp3") {
+    if (!base64Audio) {
+        return;
+    }
+
+    const mimeTypes = {
+        mp3: "audio/mpeg",
+        wav: "audio/wav",
+        webm: "audio/webm",
+    };
+
+    const mimeType = mimeTypes[audioFormat];
+
+    if (!mimeType) {
+        throw new Error("Unsupported audio format.");
+    }
+
+    const binary = atob(base64Audio);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+    }
+
+    const audioBlob = new Blob([bytes], {
+        type: mimeType,
+    });
+
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
+
+    currentVoiceAudio = audio;
+
+    const playbackFinished = new Promise((resolve, reject) => {
+        audio.addEventListener("ended", resolve, { once: true });
+
+        audio.addEventListener(
+            "error",
+            () => reject(new Error("TTS playback failed.")),
+            { once: true }
+        );
+    });
+
+    try {
+        await audio.play();
+        await playbackFinished;
+    } finally {
+        if (currentVoiceAudio === audio) {
+            currentVoiceAudio = null;
+        }
+
+        URL.revokeObjectURL(audioUrl);
+    }
+}
+async function handleVoiceRecordingStop() {
+    const recorder = mediaRecorder;
+    mediaRecorder = null;
+
+    if (!audioChunks.length || !recorder) {
+        updateVoiceStatus("Voice standby");
+        return;
+    }
+
+    isVoiceProcessing = true;
+    updateVoiceStatus("Processing audio...");
+    updateSystemStatus("PROCESSING VOICE...");
+
+    try {
+        const audioBlob = new Blob(audioChunks, {
+            type: recorder.mimeType || "audio/webm"
+        });
+
+        audioChunks = [];
+
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+
+        let binary = "";
+
+        bytes.forEach((byte) => {
+            binary += String.fromCharCode(byte);
+        });
+
+        const payload = btoa(binary);
+
+        const result = await window.pywebview.api.process_audio(
+            payload,
+            "webm",
+            24000,
+            null
+        );
+
+        if (!result?.success) {
+            throw new Error(
+                result?.error || "Voice processing failed."
+            );
+        }
+
+        if (result.transcription) {
+            appendMessage(result.transcription, "user");
+        }
+
+        if (result.response) {
+            appendMessage(result.response, "assistant");
+        }
+
+        if (result.audio) {
+            updateVoiceStatus("Speaking...");
+            await playVoiceAudio(
+                result.audio,
+                result.audio_format
+            );
+        }
+
+        updateVoiceStatus("Voice standby");
+    } catch (error) {
+        updateVoiceStatus("Voice error");
+        console.error("Voice processing failed:", error);
+    } finally {
+        isVoiceProcessing = false;
+        updateSystemStatus("SYSTEM READY");
+    }
+}
+
 /* =========================================
    MESSAGE SUBMISSION
 ========================================= */
@@ -774,6 +1045,16 @@ if (messageForm) {
         "submit",
         handleMessageSubmit
     );
+}
+
+if (voiceButton) {
+    voiceButton.addEventListener("click", () => {
+        if (isRecording) {
+            stopVoiceRecording();
+        } else {
+            startVoiceRecording();
+        }
+    });
 }
 
 /* =========================================

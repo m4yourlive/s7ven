@@ -1,6 +1,7 @@
 
 """Dependency injection container for S7VEN."""
 
+import asyncio
 from pathlib import Path
 
 from dependency_injector import containers, providers
@@ -36,6 +37,11 @@ from seven.core.logging import LoggerConfig, LoggerService
 from seven.core.runtime import RuntimeManager
 from seven.core.settings.settings_manager import SettingsManager
 from seven.core.settings.settings_store import SettingsStore
+
+from seven.core.voice.assistant import VoiceAssistant
+from seven.core.voice.exceptions import VoiceProviderUnavailableError
+from seven.core.voice.pipeline import VoicePipeline
+from seven.core.voice.providers.openai_provider import OpenAIVoiceProvider
 
 
 def create_logger_config(
@@ -90,6 +96,22 @@ def create_openai_provider(
         model=config.model,
         base_url=config.api_base_url,
         timeout=config.request_timeout,
+    )
+
+
+def create_openai_voice_provider(
+    config_manager: ConfigurationManager,
+) -> OpenAIVoiceProvider:
+    """Create OpenAI voice provider from application configuration."""
+    config = config_manager.config.ai
+
+    if config.api_key is None:
+        raise VoiceProviderUnavailableError(
+            "OpenAI API key is required for voice interaction."
+        )
+
+    return OpenAIVoiceProvider(
+        api_key=config.api_key.get_secret_value(),
     )
 
 
@@ -233,6 +255,24 @@ class SevenContainer(containers.DeclarativeContainer):
         context_manager=conversation_context_manager,
     )
 
+    # Voice Providers
+    openai_voice_provider = providers.Singleton(
+        create_openai_voice_provider,
+        config_manager,
+    )
+
+    voice_pipeline = providers.Singleton(
+        VoicePipeline,
+        stt_provider=openai_voice_provider,
+        tts_provider=openai_voice_provider,
+    )
+
+    voice_assistant = providers.Singleton(
+        VoiceAssistant,
+        voice_pipeline=voice_pipeline,
+        ai_pipeline=ai_pipeline,
+    )
+
     # Runtime
     runtime_manager = providers.Singleton(
         RuntimeManager,
@@ -251,16 +291,34 @@ def initialize_container(container: SevenContainer) -> None:
     container.runtime_manager().start()
 
 
+
 def shutdown_container(container: SevenContainer) -> None:
     """Stop Seven and release initialized resources."""
-    import asyncio
 
     async def close_resources() -> None:
-        ai_engine_provider = getattr(container, "ai_engine", None)
+        voice_provider = getattr(
+            container,
+            "voice_pipeline",
+            None,
+        )
 
-        if ai_engine_provider is not None:
-            engine = ai_engine_provider()
-            await engine.close()
+        if (
+            voice_provider is not None
+            and voice_provider.is_initialized()
+        ):
+            await voice_provider().close()
+
+        ai_engine_provider = getattr(
+            container,
+            "ai_engine",
+            None,
+        )
+
+        if (
+            ai_engine_provider is not None
+            and ai_engine_provider.is_initialized()
+        ):
+            await ai_engine_provider().close()
 
         database_provider = getattr(
             container,
@@ -268,9 +326,11 @@ def shutdown_container(container: SevenContainer) -> None:
             None,
         )
 
-        if database_provider is not None:
-            manager = database_provider()
-            await manager.dispose()
+        if (
+            database_provider is not None
+            and database_provider.is_initialized()
+        ):
+            await database_provider().dispose()
 
     try:
         asyncio.run(close_resources())

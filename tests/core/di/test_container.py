@@ -13,6 +13,8 @@ from seven.core.di.container import (
 )
 from seven.core.logging import LoggerConfig
 
+from seven.core.voice.assistant import VoiceAssistant
+from seven.core.voice.pipeline import VoicePipeline
 
 class FakeLoggerService:
     """Fake logger service."""
@@ -140,3 +142,52 @@ def test_initialize_and_shutdown_use_same_runtime_instance() -> None:
     assert container.runtime_manager() is container.runtime
     assert container.runtime.start_calls == 1
     assert container.runtime.stop_calls == 1
+
+def test_voice_pipeline_uses_same_provider_for_stt_and_tts() -> None:
+    container = SevenContainer()
+    fake_provider = object()
+
+    container.openai_voice_provider.override(
+        providers.Object(fake_provider)
+    )
+
+    pipeline = container.voice_pipeline()
+
+    assert isinstance(pipeline, VoicePipeline)
+    assert pipeline._stt_provider is fake_provider
+    assert pipeline._tts_provider is fake_provider
+
+
+def test_voice_assistant_uses_voice_and_ai_pipelines() -> None:
+    container = SevenContainer()
+
+    fake_voice_pipeline = object()
+    fake_ai_pipeline = object()
+
+    container.voice_pipeline.override(
+        providers.Object(fake_voice_pipeline)
+    )
+    container.ai_pipeline.override(
+        providers.Object(fake_ai_pipeline)
+    )
+
+    assistant = container.voice_assistant()
+
+    assert isinstance(assistant, VoiceAssistant)
+    assert assistant._voice_pipeline is fake_voice_pipeline
+    assert assistant._ai_pipeline is fake_ai_pipeline
+
+
+def test_voice_pipeline_is_singleton() -> None:
+    container = SevenContainer()
+
+    fake_provider = object()
+
+    container.openai_voice_provider.override(
+        providers.Object(fake_provider)
+    )
+
+    first = container.voice_pipeline()
+    second = container.voice_pipeline()
+
+    assert first is second

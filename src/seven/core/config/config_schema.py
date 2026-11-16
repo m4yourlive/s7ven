@@ -68,10 +68,23 @@ class AIConfig(StrictConfigModel):
 
 
 class VoiceConfig(StrictConfigModel):
-    enabled: bool = False
+    """Configure voice interaction behavior."""
+
+    enabled: bool = True
     input_enabled: bool = True
     output_enabled: bool = True
+
     speech_rate: int = Field(default=175, ge=80, le=300)
+    speech_voice: str = "alloy"
+
+    wake_word_enabled: bool = False
+    wake_word: str = "hey seven"
+
+    vad_enabled: bool = True
+    vad_threshold: float = Field(default=500.0, gt=0)
+    silence_duration_ms: int = Field(default=600, ge=100, le=5000)
+
+    max_audio_size_mb: int = Field(default=25, ge=1, le=100)
 
 
 class AppConfig(StrictConfigModel):

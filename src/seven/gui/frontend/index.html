@@ -147,9 +147,9 @@
                 </div>
 
                 <div class="topbar-status">
-                    <span class="listening-pill">
+                    <span class="listening-pill" id="voice-status" aria-live="polite">
                         <span class="listening-dot" aria-hidden="true"></span>
-                        Listening...
+                        Voice Standby
                     </span>
 
                     <span class="wave" aria-hidden="true">
@@ -246,10 +246,13 @@
                 >
                     <button
                         class="voice-button"
+                        id="voice-button"
                         type="button"
-                        aria-label="Voice input"
+                        aria-label="Start voice recording"
                     >
-                        <svg class="icon" aria-hidden="true"><use href="#icon-wave"/></svg>
+                        <svg class="icon" aria-hidden="true">
+                            <use href="#icon-wave"/>
+                        </svg>
                     </button>
 
                     <div class="composer-input-wrapper">
