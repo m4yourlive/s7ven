@@ -1,4 +1,3 @@
-
 """S7VEN desktop application entry point."""
 
 import sys
@@ -13,6 +12,13 @@ def main() -> int:
     container = SevenContainer()
     runtime_manager = container.runtime_manager()
 
+    ai_pipeline = getattr(container, "ai_pipeline", None)
+    database_session_manager = getattr(
+        container,
+        "database_session_manager",
+        None,
+    )
+
     bridge = FrontendBridge(
         voice_assistant_provider=getattr(
             container,
@@ -20,6 +26,12 @@ def main() -> int:
             None,
         ),
         voice_config_provider=lambda: container.config_manager().config.voice,
+        ai_pipeline_provider=(
+            ai_pipeline.provider
+            if ai_pipeline is not None
+            else None
+        ),
+        database_session_manager_provider=database_session_manager,
     )
 
     try:
