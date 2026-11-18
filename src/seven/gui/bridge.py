@@ -1,15 +1,16 @@
-
 """JavaScript-Python bridge for the S7VEN frontend."""
 
 from __future__ import annotations
 
 import asyncio
 import base64
+import logging
 from collections.abc import Callable
 from typing import Any
 
 from seven.core.conversations.context_injector import ContextInjector
 from seven.core.conversations.conversation_service import ConversationService
+from seven.core.conversations.memory_consolidator import MemoryConsolidator
 from seven.core.conversations.memory_retriever import MemoryRetriever
 from seven.core.conversations.memory_service import MemoryService
 from seven.core.conversations.message_service import MessageService
@@ -18,6 +19,9 @@ from seven.core.voice.assistant import VoiceAssistant
 from seven.core.voice.capture.audio_decoder import AudioDecoder
 from seven.core.voice.capture.audio_validator import AudioValidator
 from seven.core.voice.models import AudioFormat
+
+
+logger = logging.getLogger(__name__)
 
 
 class FrontendBridge:
@@ -154,6 +158,22 @@ class FrontendBridge:
                     conversation_id=conversation_id,
                     context_injector=context_injector,
                 )
+
+                try:
+                    async with session.begin_nested():
+                        memory_consolidator = MemoryConsolidator(
+                            message_service=message_service,
+                            memory_service=memory_service,
+                        )
+
+                        await memory_consolidator.consolidate(
+                            conversation_id
+                        )
+
+                except Exception:
+                    logger.exception(
+                        "Automatic memory consolidation failed."
+                    )
 
                 await session.commit()
 
