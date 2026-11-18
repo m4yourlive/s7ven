@@ -46,7 +46,9 @@ class MemoryCandidate:
                 raise ValueError(f"{name} must be finite.")
 
             if not 0.0 <= normalized <= 1.0:
-                raise ValueError(f"{name} must be between 0.0 and 1.0.")
+                raise ValueError(
+                    f"{name} must be between 0.0 and 1.0."
+                )
 
             object.__setattr__(self, name, normalized)
 
@@ -59,7 +61,9 @@ class MemoryCandidate:
 
         for item in self.classification_evidence:
             if not isinstance(item, str):
-                raise TypeError("Classification evidence must contain strings.")
+                raise TypeError(
+                    "Classification evidence must contain strings."
+                )
 
             normalized_item = item.strip()
 
@@ -93,12 +97,16 @@ class MemoryClassification:
             isinstance(self.confidence, bool)
             or not isinstance(self.confidence, (int, float))
         ):
-            raise TypeError("Classification confidence must be numeric.")
+            raise TypeError(
+                "Classification confidence must be numeric."
+            )
 
         confidence = float(self.confidence)
 
         if not math.isfinite(confidence):
-            raise ValueError("Classification confidence must be finite.")
+            raise ValueError(
+                "Classification confidence must be finite."
+            )
 
         if not 0.0 <= confidence <= 1.0:
             raise ValueError(
@@ -108,7 +116,9 @@ class MemoryClassification:
         object.__setattr__(self, "confidence", confidence)
 
         if not isinstance(self.evidence, (tuple, list)):
-            raise TypeError("Classification evidence must be a tuple or list.")
+            raise TypeError(
+                "Classification evidence must be a tuple or list."
+            )
 
         normalized_evidence: list[str] = []
 
@@ -120,7 +130,10 @@ class MemoryClassification:
 
             normalized_item = item.strip()
 
-            if normalized_item and normalized_item not in normalized_evidence:
+            if (
+                normalized_item
+                and normalized_item not in normalized_evidence
+            ):
                 normalized_evidence.append(normalized_item)
 
         object.__setattr__(
@@ -129,6 +142,139 @@ class MemoryClassification:
             tuple(normalized_evidence),
         )
 
+
+@dataclass(frozen=True, slots=True)
+class MemoryScoringContext:
+    """Provide conversation context for memory relevance scoring."""
+
+    conversation_id: str | None = None
+    preferred_categories: tuple[str, ...] = ()
+    reference_time: datetime | None = None
+    recency_half_life_days: float | None = None
+
+    def __post_init__(self) -> None:
+        """Validate and normalize scoring context."""
+        if self.conversation_id is not None:
+            if not isinstance(self.conversation_id, str):
+                raise TypeError("Conversation ID must be a string.")
+
+            conversation_id = self.conversation_id.strip()
+
+            if not conversation_id:
+                raise ValueError("Conversation ID cannot be empty.")
+
+            object.__setattr__(
+                self,
+                "conversation_id",
+                conversation_id,
+            )
+
+        if not isinstance(self.preferred_categories, (tuple, list)):
+            raise TypeError(
+                "Preferred categories must be a tuple or list."
+            )
+
+        categories: list[str] = []
+
+        for category in self.preferred_categories:
+            normalized = normalize_memory_category(category)
+
+            if normalized not in categories:
+                categories.append(normalized)
+
+        object.__setattr__(
+            self,
+            "preferred_categories",
+            tuple(categories),
+        )
+
+        if self.reference_time is not None and not isinstance(
+            self.reference_time,
+            datetime,
+        ):
+            raise TypeError("Reference time must be a datetime value.")
+
+        if self.recency_half_life_days is not None:
+            value = self.recency_half_life_days
+
+            if isinstance(value, bool) or not isinstance(
+                value,
+                (int, float),
+            ):
+                raise TypeError(
+                    "Recency half-life must be numeric."
+                )
+
+            normalized_half_life = float(value)
+
+            if not math.isfinite(normalized_half_life):
+                raise ValueError(
+                    "Recency half-life must be finite."
+                )
+
+            if normalized_half_life <= 0.0:
+                raise ValueError(
+                    "Recency half-life must be positive."
+                )
+
+            object.__setattr__(
+                self,
+                "recency_half_life_days",
+                normalized_half_life,
+            )
+
+@dataclass(frozen=True, slots=True)
+class MemoryScoreBreakdown:
+    """Explain the individual components of a memory score."""
+
+    lexical_score: float
+    category_score: float
+    conversation_score: float
+    recency_score: float
+    contextual_score: float
+    importance_score: float
+    combined_score: float
+
+    def __post_init__(self) -> None:
+        """Validate all score components."""
+        fields = (
+            "lexical_score",
+            "category_score",
+            "conversation_score",
+            "recency_score",
+            "contextual_score",
+            "importance_score",
+            "combined_score",
+        )
+
+        for field_name in fields:
+            value = getattr(self, field_name)
+
+            if isinstance(value, bool) or not isinstance(
+                value,
+                (int, float),
+            ):
+                raise TypeError(
+                    f"{field_name} must be numeric."
+                )
+
+            normalized = float(value)
+
+            if not math.isfinite(normalized):
+                raise ValueError(
+                    f"{field_name} must be finite."
+                )
+
+            if not 0.0 <= normalized <= 1.0:
+                raise ValueError(
+                    f"{field_name} must be between 0.0 and 1.0."
+                )
+
+            object.__setattr__(
+                self,
+                field_name,
+                normalized,
+            )
 
 @dataclass(frozen=True, slots=True)
 class MemorySearchRequest:
@@ -152,11 +298,16 @@ class MemorySearchRequest:
 
         object.__setattr__(self, "query", normalized_query)
 
-        if isinstance(self.limit, bool) or not isinstance(self.limit, int):
+        if isinstance(self.limit, bool) or not isinstance(
+            self.limit,
+            int,
+        ):
             raise TypeError("Memory search limit must be an integer.")
 
         if self.limit < 1:
-            raise ValueError("Memory search limit must be positive.")
+            raise ValueError(
+                "Memory search limit must be positive."
+            )
 
         if (
             isinstance(self.min_importance, bool)
@@ -167,7 +318,9 @@ class MemorySearchRequest:
         importance = float(self.min_importance)
 
         if not math.isfinite(importance):
-            raise ValueError("Minimum importance must be finite.")
+            raise ValueError(
+                "Minimum importance must be finite."
+            )
 
         if not 0.0 <= importance <= 1.0:
             raise ValueError(
@@ -177,7 +330,9 @@ class MemorySearchRequest:
         object.__setattr__(self, "min_importance", importance)
 
         if not isinstance(self.categories, (tuple, list)):
-            raise TypeError("Memory categories must be a tuple or list.")
+            raise TypeError(
+                "Memory categories must be a tuple or list."
+            )
 
         normalized_categories: list[str] = []
 
@@ -195,12 +350,16 @@ class MemorySearchRequest:
 
         if self.conversation_id is not None:
             if not isinstance(self.conversation_id, str):
-                raise TypeError("Conversation ID must be a string.")
+                raise TypeError(
+                    "Conversation ID must be a string."
+                )
 
             conversation_id = self.conversation_id.strip()
 
             if not conversation_id:
-                raise ValueError("Conversation ID cannot be empty.")
+                raise ValueError(
+                    "Conversation ID cannot be empty."
+                )
 
             object.__setattr__(
                 self,
@@ -209,7 +368,9 @@ class MemorySearchRequest:
             )
 
         if not isinstance(self.include_global, bool):
-            raise TypeError("Include global must be a boolean.")
+            raise TypeError(
+                "Include global must be a boolean."
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -253,17 +414,27 @@ class MemorySearchMatch:
         )
 
         self._validate_score("importance", self.importance)
-        self._validate_score("relevance_score", self.relevance_score)
-        self._validate_score("combined_score", self.combined_score)
+        self._validate_score(
+            "relevance_score",
+            self.relevance_score,
+        )
+        self._validate_score(
+            "combined_score",
+            self.combined_score,
+        )
 
         if self.conversation_id is not None:
             if not isinstance(self.conversation_id, str):
-                raise TypeError("Conversation ID must be a string.")
+                raise TypeError(
+                    "Conversation ID must be a string."
+                )
 
             conversation_id = self.conversation_id.strip()
 
             if not conversation_id:
-                raise ValueError("Conversation ID cannot be empty.")
+                raise ValueError(
+                    "Conversation ID cannot be empty."
+                )
 
             object.__setattr__(
                 self,
@@ -275,12 +446,17 @@ class MemorySearchMatch:
             self.created_at is not None
             and not isinstance(self.created_at, datetime)
         ):
-            raise TypeError("Created at must be a datetime value.")
+            raise TypeError(
+                "Created at must be a datetime value."
+            )
 
     @staticmethod
     def _validate_score(name: str, value: float) -> None:
         """Validate a normalized memory score."""
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
+        if isinstance(value, bool) or not isinstance(
+            value,
+            (int, float),
+        ):
             raise TypeError(f"{name} must be numeric.")
 
         score = float(value)
@@ -289,4 +465,6 @@ class MemorySearchMatch:
             raise ValueError(f"{name} must be finite.")
 
         if not 0.0 <= score <= 1.0:
-            raise ValueError(f"{name} must be between 0.0 and 1.0.")
+            raise ValueError(
+                f"{name} must be between 0.0 and 1.0."
+            )

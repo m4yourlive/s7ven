@@ -13,6 +13,8 @@ from seven.core.conversations.memory_consolidator import (
 )
 from seven.core.conversations.memory_contracts import (
     MemoryClassification,
+    MemoryScoreBreakdown,
+    MemoryScoringContext,
     MemorySearchMatch,
     MemorySearchRequest,
 )
@@ -22,6 +24,10 @@ from seven.core.conversations.memory_normalizer import (
 )
 from seven.core.conversations.memory_quality import MemoryQualityValidator
 from seven.core.conversations.memory_retriever import MemoryRetriever
+from seven.core.conversations.memory_scorer import (
+    MemoryRelevance,
+    MemoryScorer,
+)
 from seven.core.conversations.memory_service import MemoryService
 from seven.core.conversations.memory_taxonomy import (
     MemoryCategoryDefinition,
@@ -60,4 +66,8 @@ __all__ = [
     "MemoryCategoryDefinition",
     "MemoryCategoryTaxonomy",
     "MemoryCategoryValidator",
+    "MemoryRelevance",
+    "MemoryScorer",
+    "MemoryScoringContext",
+    "MemoryScoreBreakdown",
 ]
