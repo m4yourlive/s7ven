@@ -1,3 +1,4 @@
+
 """Memory retrieval and relevance ranking for S7VEN."""
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from seven.core.conversations.memory_config import (
 )
 from seven.core.conversations.memory_contracts import (
     MemoryScoringContext,
+    MemorySearchMatch,
 )
 from seven.core.conversations.memory_scorer import MemoryScorer
 from seven.core.conversations.memory_service import MemoryService
@@ -117,6 +119,164 @@ class MemoryRetriever:
 
         return len(query_tokens & memory_tokens) / len(query_tokens)
 
+    def _select_accepted_memories(
+        self,
+        ranked_matches: Sequence[MemorySearchMatch],
+        memories_by_id: dict[str, Memory],
+        *,
+        result_limit: int,
+    ) -> list[Memory]:
+        """Select ranked memories that satisfy configured thresholds."""
+        accepted_memories: list[Memory] = []
+
+        for match in ranked_matches:
+            memory = memories_by_id.get(match.memory_id)
+
+            if memory is None:
+                continue
+
+            if match.relevance_score <= 0.0:
+                continue
+
+            if (
+                match.relevance_score
+                < self._config.retrieval_min_relevance
+            ):
+                continue
+
+            if (
+                match.combined_score
+                < self._config.retrieval_min_combined_score
+            ):
+                continue
+
+            accepted_memories.append(memory)
+
+            if len(accepted_memories) >= result_limit:
+                break
+
+        return accepted_memories
+
+    def _get_accepted_memories(
+        self,
+        query: str,
+        candidates: list[Memory],
+        *,
+        result_limit: int,
+        context: MemoryScoringContext | None,
+    ) -> list[Memory]:
+        """Score candidates and return accepted memories."""
+        eligible_candidates = [
+            memory
+            for memory in candidates
+            if memory.importance >= self._min_importance
+        ]
+
+        if not eligible_candidates:
+            return []
+
+        ranked_matches = self._scorer.rank(
+            query,
+            eligible_candidates,
+            context=context,
+        )
+
+        memories_by_id = {
+            str(memory.id): memory
+            for memory in eligible_candidates
+        }
+
+        return self._select_accepted_memories(
+            ranked_matches,
+            memories_by_id,
+            result_limit=result_limit,
+        )
+
+    async def _retrieve_adaptively(
+        self,
+        query: str,
+        *,
+        result_limit: int,
+        context: MemoryScoringContext | None,
+    ) -> list[Memory]:
+        """Expand retrieval while scoring each unique candidate only once."""
+        initial_limit = self._config.candidate_limit(result_limit)
+
+        if self._config.adaptive_retrieval_enabled:
+            current_limit = min(
+                initial_limit,
+                self._config.adaptive_retrieval_max_candidates,
+            )
+        else:
+            current_limit = initial_limit
+
+        memories_by_id: dict[str, Memory] = {}
+        matches_by_id: dict[str, MemorySearchMatch] = {}
+
+        while True:
+            candidates = await self._memory_service.search(
+                query,
+                limit=current_limit,
+            )
+
+            new_eligible_candidates: list[Memory] = []
+
+            for memory in candidates:
+                memory_id = str(memory.id)
+
+                if memory_id in memories_by_id:
+                    continue
+
+                memories_by_id[memory_id] = memory
+
+                if memory.importance >= self._min_importance:
+                    new_eligible_candidates.append(memory)
+
+            if new_eligible_candidates:
+                new_matches = self._scorer.score_many(
+                    query,
+                    new_eligible_candidates,
+                    context=context,
+                )
+
+                for match in new_matches:
+                    matches_by_id[match.memory_id] = match
+
+            ranked_matches = self._scorer.rank_matches(
+                matches_by_id.values(),
+            )
+
+            accepted_memories = self._select_accepted_memories(
+                ranked_matches,
+                memories_by_id,
+                result_limit=result_limit,
+            )
+
+            if len(accepted_memories) >= result_limit:
+                return accepted_memories
+
+            if not self._config.adaptive_retrieval_enabled:
+                return accepted_memories
+
+            if len(candidates) < current_limit:
+                return accepted_memories
+
+            maximum = self._config.adaptive_retrieval_max_candidates
+
+            if current_limit >= maximum:
+                return accepted_memories
+
+            next_limit = min(
+                current_limit
+                * self._config.adaptive_retrieval_expansion_factor,
+                maximum,
+            )
+
+            if next_limit <= current_limit:
+                return accepted_memories
+
+            current_limit = next_limit
+
     async def retrieve(
         self,
         query: str,
@@ -124,7 +284,7 @@ class MemoryRetriever:
         limit: int | None = None,
         context: MemoryScoringContext | None = None,
     ) -> list[Memory]:
-        """Retrieve memories using calibrated relevance thresholds."""
+        """Retrieve memories using adaptive relevance ranking."""
         if not isinstance(query, str) or not query.strip():
             raise ValueError("Retrieval query cannot be empty.")
 
@@ -154,52 +314,11 @@ class MemoryRetriever:
         if not self._tokenize(query):
             return []
 
-        candidates = await self._memory_service.search(
+        return await self._retrieve_adaptively(
             query,
-            limit=self._config.candidate_limit(result_limit),
-        )
-
-        eligible_candidates = [
-            memory
-            for memory in candidates
-            if memory.importance >= self._min_importance
-        ]
-
-        if not eligible_candidates:
-            return []
-
-        ranked_matches = self._scorer.rank(
-            query,
-            eligible_candidates,
+            result_limit=result_limit,
             context=context,
         )
-
-        memories_by_id = {
-            str(memory.id): memory
-            for memory in eligible_candidates
-        }
-
-        accepted_matches = [
-            match
-            for match in ranked_matches
-            if (
-                match.memory_id in memories_by_id
-                and match.relevance_score > 0.0
-                and (
-                    match.relevance_score
-                    >= self._config.retrieval_min_relevance
-                )
-                and (
-                    match.combined_score
-                    >= self._config.retrieval_min_combined_score
-                )
-            )
-        ]
-
-        return [
-            memories_by_id[match.memory_id]
-            for match in accepted_matches[:result_limit]
-        ]
 
     async def retrieve_by_tokens(
         self,

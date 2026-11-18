@@ -2,6 +2,7 @@
 """Relevance scoring and ranking for long-term memories."""
 
 from __future__ import annotations
+
 from functools import lru_cache
 import heapq
 import math
@@ -96,12 +97,7 @@ class MemoryScorer:
             raise TypeError("Text must be a string.")
 
         normalized = MemoryCandidateNormalizer.normalize_text(text)
-
-        tokens = frozenset(
-            token
-            for token in cls._TOKEN_PATTERN.findall(normalized)
-            if len(token) > 1
-        )
+        tokens = cls._tokenize_normalized(normalized)
 
         return normalized, tokens
 
@@ -159,7 +155,6 @@ class MemoryScorer:
             content,
         )
 
-
     def _calculate_relevance_prepared(
         self,
         normalized_query: str,
@@ -209,7 +204,6 @@ class MemoryScorer:
             relevance_score=normalized_score,
             lexical_relevance_score=normalized_score,
         )
-
 
     def explain(
         self,
@@ -381,6 +375,56 @@ class MemoryScorer:
             ),
         )
 
+    @staticmethod
+    def _ranking_key(
+        match: MemorySearchMatch,
+    ) -> tuple[float, float, float, str]:
+        """Build a deterministic ranking key for a scored memory."""
+        return (
+            match.combined_score,
+            match.relevance_score,
+            match.importance,
+            match.created_at.isoformat()
+            if match.created_at is not None
+            else "",
+        )
+
+    def rank_matches(
+        self,
+        matches: Iterable[MemorySearchMatch],
+        limit: int | None = None,
+    ) -> list[MemorySearchMatch]:
+        """Rank existing score results without recalculating their scores."""
+        if limit is not None:
+            if isinstance(limit, bool) or not isinstance(limit, int):
+                raise TypeError("Ranking limit must be an integer.")
+
+            if limit < 1:
+                raise ValueError("Ranking limit must be positive.")
+
+        validated_matches: list[MemorySearchMatch] = []
+
+        for match in matches:
+            if not isinstance(match, MemorySearchMatch):
+                raise TypeError(
+                    "All ranking entries must be MemorySearchMatch instances."
+                )
+
+            validated_matches.append(match)
+
+        if limit is None:
+            return sorted(
+                validated_matches,
+                key=self._ranking_key,
+                reverse=True,
+            )
+
+        return heapq.nlargest(
+            limit,
+            validated_matches,
+            key=self._ranking_key,
+        )
+
     def rank(
         self,
         query: str,
@@ -402,27 +446,7 @@ class MemoryScorer:
             context=context,
         )
 
-        ranking_key = lambda match: (
-            match.combined_score,
-            match.relevance_score,
-            match.importance,
-            match.created_at.isoformat()
-            if match.created_at is not None
-            else "",
-        )
-
-        if limit is None:
-            matches.sort(
-                key=ranking_key,
-                reverse=True,
-            )
-            return matches
-
-        return heapq.nlargest(
-            limit,
-            matches,
-            key=ranking_key,
-        )
+        return self.rank_matches(matches, limit=limit)
 
     def _calculate_contextual_relevance(
         self,

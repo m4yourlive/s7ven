@@ -1,3 +1,4 @@
+
 """Shared configuration for the memory management architecture."""
 
 from __future__ import annotations
@@ -17,6 +18,10 @@ class MemoryArchitectureConfig:
     retrieval_min_relevance: float = 0.0
     retrieval_min_combined_score: float = 0.0
 
+    adaptive_retrieval_enabled: bool = True
+    adaptive_retrieval_max_candidates: int = 100
+    adaptive_retrieval_expansion_factor: int = 2
+
     relevance_weight: float = 0.7
     importance_weight: float = 0.3
 
@@ -26,6 +31,8 @@ class MemoryArchitectureConfig:
     lexical_phrase_weight: float = 0.15
 
     max_context_memories: int = 5
+    max_context_tokens: int = 1200
+    token_estimation_chars_per_token: int = 4
 
     context_lexical_weight: float = 0.7
     context_category_weight: float = 0.1
@@ -40,21 +47,40 @@ class MemoryArchitectureConfig:
             "retrieval_limit",
             "retrieval_candidate_multiplier",
             "retrieval_min_candidates",
+            "adaptive_retrieval_max_candidates",
+            "adaptive_retrieval_expansion_factor",
             "max_context_memories",
+            "max_context_tokens",
+            "token_estimation_chars_per_token",
         )
 
         for field_name in integer_fields:
             value = getattr(self, field_name)
 
             if isinstance(value, bool) or not isinstance(value, int):
-                raise TypeError(
-                    f"{field_name} must be an integer."
-                )
+                raise TypeError(f"{field_name} must be an integer.")
 
             if value < 1:
-                raise ValueError(
-                    f"{field_name} must be positive."
-                )
+                raise ValueError(f"{field_name} must be positive.")
+
+        if self.adaptive_retrieval_expansion_factor < 2:
+            raise ValueError(
+                "Adaptive retrieval expansion factor must be at least 2."
+            )
+
+        if (
+            self.adaptive_retrieval_max_candidates
+            < self.retrieval_min_candidates
+        ):
+            raise ValueError(
+                "Adaptive retrieval maximum candidates cannot be "
+                "smaller than retrieval minimum candidates."
+            )
+
+        if not isinstance(self.adaptive_retrieval_enabled, bool):
+            raise TypeError(
+                "adaptive_retrieval_enabled must be a boolean."
+            )
 
         unit_interval_fields = (
             "retrieval_min_importance",
@@ -113,21 +139,15 @@ class MemoryArchitectureConfig:
                 (int, float),
             )
         ):
-            raise TypeError(
-                "Recency half-life must be numeric."
-            )
+            raise TypeError("Recency half-life must be numeric.")
 
         half_life = float(self.recency_half_life_days)
 
         if not math.isfinite(half_life):
-            raise ValueError(
-                "Recency half-life must be finite."
-            )
+            raise ValueError("Recency half-life must be finite.")
 
         if half_life <= 0.0:
-            raise ValueError(
-                "Recency half-life must be positive."
-            )
+            raise ValueError("Recency half-life must be positive.")
 
         object.__setattr__(
             self,
@@ -186,7 +206,7 @@ class MemoryArchitectureConfig:
         self,
         requested_limit: int | None = None,
     ) -> int:
-        """Calculate the number of candidates to fetch for retrieval."""
+        """Calculate the initial number of candidates for retrieval."""
         limit = (
             self.retrieval_limit
             if requested_limit is None

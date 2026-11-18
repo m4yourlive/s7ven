@@ -1,4 +1,5 @@
-"""Normalization and deduplication of memory candidates."""
+
+"""Normalization and deduplication of memory candidates and records."""
 
 from __future__ import annotations
 
@@ -6,12 +7,22 @@ import hashlib
 import re
 import unicodedata
 from collections.abc import Iterable
+from typing import Protocol, TypeVar
 
 from seven.core.conversations.memory_contracts import MemoryCandidate
 
 
+class MemoryContent(Protocol):
+    """Protocol for objects containing memory text."""
+
+    content: str
+
+
+MemoryRecord = TypeVar("MemoryRecord", bound=MemoryContent)
+
+
 class MemoryCandidateNormalizer:
-    """Normalize memory text and remove duplicate candidates."""
+    """Normalize memory text and remove duplicate memory records."""
 
     @staticmethod
     def normalize_text(content: str) -> str:
@@ -104,3 +115,29 @@ class MemoryCandidateNormalizer:
                 unique[normalized] = candidate
 
         return list(unique.values())
+
+    @classmethod
+    def deduplicate_memories(
+        cls,
+        memories: Iterable[MemoryRecord],
+    ) -> tuple[MemoryRecord, ...]:
+        """Remove duplicate memory records while preserving retrieval order."""
+        unique: dict[str, MemoryRecord] = {}
+
+        for memory in memories:
+            content = getattr(memory, "content", None)
+
+            if not isinstance(content, str):
+                raise TypeError(
+                    "Every memory must contain string content."
+                )
+
+            normalized = cls.normalize_text(content)
+
+            if not normalized:
+                continue
+
+            if normalized not in unique:
+                unique[normalized] = memory
+
+        return tuple(unique.values())
