@@ -14,6 +14,11 @@ class MemoryService:
         """Initialize the memory service."""
         self._repository = MemoryRepository(session)
 
+    @property
+    def repository(self) -> MemoryRepository:
+        """Expose the underlying memory repository."""
+        return self._repository
+
     async def create(
         self,
         *,

@@ -33,9 +33,10 @@ class FakeAIPipeline:
         self,
         message,
         *,
-        message_service,
-        conversation_id,
-        context_injector,
+        message_service=None,
+        conversation_id=None,
+        context_injector=None,
+        user_profile=None,
     ):
         await message_service.create(
             conversation_id=conversation_id,

@@ -1,5 +1,9 @@
+
 """Conversation and memory management package."""
 
+from seven.core.conversations.context_aware_personalizer import (
+    ContextAwarePersonalizer,
+)
 from seven.core.conversations.context_injector import ContextInjector
 from seven.core.conversations.conversation_service import ConversationService
 from seven.core.conversations.memory_category_validator import (
@@ -7,8 +11,16 @@ from seven.core.conversations.memory_category_validator import (
 )
 from seven.core.conversations.memory_classifier import MemoryClassifier
 from seven.core.conversations.memory_config import MemoryArchitectureConfig
+from seven.core.conversations.memory_conflict_detector import (
+    MemoryConflict,
+    MemoryConflictDetector,
+    MemoryConflictType,
+)
 from seven.core.conversations.memory_consolidator import (
     MemoryCandidate,
+    MemoryConsolidationAction,
+    MemoryConsolidationItem,
+    MemoryConsolidationResult,
     MemoryConsolidator,
 )
 from seven.core.conversations.memory_contracts import (
@@ -40,7 +52,47 @@ from seven.core.conversations.memory_types import (
     matches_memory_category_filter,
     normalize_memory_category,
 )
+from seven.core.conversations.memory_update_policy import (
+    MemoryUpdateAction,
+    MemoryUpdateDecision,
+    MemoryUpdatePolicy,
+)
+from seven.core.conversations.memory_update_service import (
+    MemoryUpdateResult,
+    MemoryUpdateService,
+)
 from seven.core.conversations.message_service import MessageService
+from seven.core.conversations.personalization_contracts import (
+    PersonalizationCategory,
+    PersonalizationDirective,
+    PersonalizationRequest,
+    PersonalizationResult,
+)
+from seven.core.conversations.personalization_engine import (
+    PersonalizationEngine,
+)
+from seven.core.conversations.profile_context_builder import (
+    ProfileContextBuilder,
+)
+from seven.core.conversations.profile_memory_context_composer import (
+    ProfileMemoryContextComposer,
+)
+from seven.core.conversations.response_style_personalizer import (
+    ResponseStylePersonalizer,
+)
+from seven.core.conversations.user_profile_contracts import (
+    PreferenceUpdate,
+    ProfileUpdate,
+    UserPreference,
+    UserProfile,
+    UserProfileAttribute,
+)
+from seven.core.conversations.user_profile_extractor import (
+    UserProfileExtractor,
+)
+from seven.core.conversations.user_profile_service import (
+    UserProfileService,
+)
 
 __all__ = [
     "ConversationService",
@@ -50,6 +102,9 @@ __all__ = [
     "ContextInjector",
     "MemoryCandidate",
     "MemoryConsolidator",
+    "MemoryConsolidationAction",
+    "MemoryConsolidationItem",
+    "MemoryConsolidationResult",
     "MemoryCategory",
     "MemoryCategoryFilter",
     "MEMORY_CATEGORY_FILTERS",
@@ -70,4 +125,28 @@ __all__ = [
     "MemoryScorer",
     "MemoryScoringContext",
     "MemoryScoreBreakdown",
+    "MemoryConflict",
+    "MemoryConflictType",
+    "MemoryConflictDetector",
+    "MemoryUpdateAction",
+    "MemoryUpdateDecision",
+    "MemoryUpdatePolicy",
+    "MemoryUpdateResult",
+    "MemoryUpdateService",
+    "PreferenceUpdate",
+    "ProfileUpdate",
+    "UserPreference",
+    "UserProfile",
+    "UserProfileAttribute",
+    "UserProfileExtractor",
+    "UserProfileService",
+    "ProfileContextBuilder",
+    "ProfileMemoryContextComposer",
+    "PersonalizationCategory",
+    "PersonalizationDirective",
+    "PersonalizationRequest",
+    "PersonalizationResult",
+    "PersonalizationEngine",
+    "ResponseStylePersonalizer",
+    "ContextAwarePersonalizer",
 ]

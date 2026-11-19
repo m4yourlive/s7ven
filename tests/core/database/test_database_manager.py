@@ -9,7 +9,7 @@ import pytest_asyncio
 from seven.core.database import DatabaseConfig, DatabaseManager
 
 
-EXPECTED_MIGRATION_REVISION = "f9c7d82df6b4"
+EXPECTED_MIGRATION_REVISION = "c2a7e91f4b30"
 
 
 @pytest.fixture

@@ -1,3 +1,4 @@
+
 """JavaScript-Python bridge for the S7VEN frontend."""
 
 from __future__ import annotations
@@ -14,6 +15,10 @@ from seven.core.conversations.memory_consolidator import MemoryConsolidator
 from seven.core.conversations.memory_retriever import MemoryRetriever
 from seven.core.conversations.memory_service import MemoryService
 from seven.core.conversations.message_service import MessageService
+from seven.core.conversations.user_profile_service import UserProfileService
+from seven.core.database.repositories.user_profile_repository import (
+    UserProfileRepository,
+)
 from seven.core.database.session import DatabaseSessionManager
 from seven.core.voice.assistant import VoiceAssistant
 from seven.core.voice.capture.audio_decoder import AudioDecoder
@@ -152,13 +157,35 @@ class FrontendBridge:
                 memory_retriever = MemoryRetriever(memory_service)
                 context_injector = ContextInjector(memory_retriever)
 
+                # Retrieve and update the structured user profile.
+                user_profile = None
+
+                try:
+                    async with session.begin_nested():
+                        profile_repository = UserProfileRepository(session)
+                        profile_service = UserProfileService(
+                            profile_repository
+                        )
+
+                        user_profile = (
+                            await profile_service.extract_and_save(message)
+                        )
+
+                except Exception:
+                    logger.exception(
+                        "Automatic user profile extraction failed."
+                    )
+
+                # Generate the AI response with the latest user profile.
                 response = await pipeline.generate(
                     message,
                     message_service=message_service,
                     conversation_id=conversation_id,
                     context_injector=context_injector,
+                    user_profile=user_profile,
                 )
 
+                # Consolidate memories without affecting the AI response.
                 try:
                     async with session.begin_nested():
                         memory_consolidator = MemoryConsolidator(
@@ -166,9 +193,24 @@ class FrontendBridge:
                             memory_service=memory_service,
                         )
 
-                        await memory_consolidator.consolidate(
-                            conversation_id
+                        consolidation_result = (
+                            await memory_consolidator.consolidate_detailed(
+                                conversation_id
+                            )
                         )
+
+                    logger.info(
+                        (
+                            "Automatic memory consolidation completed: "
+                            "created=%d, reinforced=%d, updated=%d, "
+                            "kept=%d, needs_review=%d."
+                        ),
+                        consolidation_result.created,
+                        consolidation_result.reinforced,
+                        consolidation_result.updated,
+                        consolidation_result.kept,
+                        consolidation_result.needs_review,
+                    )
 
                 except Exception:
                     logger.exception(
