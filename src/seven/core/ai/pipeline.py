@@ -15,8 +15,22 @@ from seven.core.ai.models import (
     MessageRole,
 )
 from seven.core.ai.request_factory import GenerationRequestFactory
+from seven.core.conversations.context_aware_personalizer import (
+    ContextAwarePersonalizer,
+)
 from seven.core.conversations.context_injector import ContextInjector
 from seven.core.conversations.message_service import MessageService
+from seven.core.conversations.personalization_contracts import (
+    PersonalizationCategory,
+    PersonalizationRequest,
+)
+from seven.core.conversations.personalization_engine import (
+    PersonalizationEngine,
+)
+from seven.core.conversations.response_style_personalizer import (
+    ResponseStylePersonalizer,
+)
+from seven.core.conversations.user_profile_contracts import UserProfile
 
 
 class AIResponsePipeline:
@@ -60,6 +74,10 @@ class AIResponsePipeline:
         self._request_factory = request_factory
         self._context = context or ConversationContext()
         self._context_manager = context_manager
+
+        self._personalization_engine = PersonalizationEngine()
+        self._response_style_personalizer = ResponseStylePersonalizer()
+        self._context_aware_personalizer = ContextAwarePersonalizer()
 
     @property
     def context(self) -> ConversationContext:
@@ -119,6 +137,19 @@ class AIResponsePipeline:
             )
 
     @staticmethod
+    def _validate_profile(
+        user_profile: UserProfile | None,
+    ) -> None:
+        """Validate the optional structured user profile."""
+        if user_profile is not None and not isinstance(
+            user_profile,
+            UserProfile,
+        ):
+            raise TypeError(
+                "user_profile must be a UserProfile instance."
+            )
+
+    @staticmethod
     async def _build_messages(
         *,
         message: AIMessage,
@@ -135,6 +166,121 @@ class AIResponsePipeline:
             )
 
         return (*history, message)
+
+    def _build_personalization_context(
+        self,
+        *,
+        user_message: str,
+        user_profile: UserProfile,
+        messages: tuple[AIMessage, ...],
+        conversation: ConversationContext,
+    ) -> str:
+        """Build context-aware personalization instructions."""
+        memory_context = "\n".join(
+            item.content
+            for item in messages
+            if (
+                item.role is MessageRole.SYSTEM
+                and item.content != conversation.system_prompt
+            )
+        )
+
+        conversation_context = "\n".join(
+            f"{item.role.value}: {item.content}"
+            for item in conversation.history
+        )
+
+        personalization_request = PersonalizationRequest(
+            user_message=user_message,
+            profile=user_profile,
+            memory_context=memory_context,
+            conversation_context=conversation_context,
+        )
+
+        initial_result = self._personalization_engine.personalize(
+            personalization_request
+        )
+
+        if not initial_result.applied:
+            return ""
+
+        context_result = self._context_aware_personalizer.personalize(
+            personalization_request,
+            initial_result,
+        )
+
+        if not context_result.applied:
+            return ""
+
+        style_result = self._response_style_personalizer.personalize(
+            context_result
+        )
+
+        sections: list[str] = []
+
+        if style_result.applied:
+            sections.append(style_result.context)
+
+        domain_directives = tuple(
+            directive
+            for directive in context_result.directives
+            if (
+                directive.category
+                is PersonalizationCategory.DOMAIN_CONTEXT
+            )
+        )
+
+        if domain_directives:
+            domain_lines = ["Domain context instructions:"]
+
+            for directive in domain_directives:
+                domain_lines.append(f"- {directive.instruction}")
+
+            sections.append("\n".join(domain_lines))
+
+        return "\n\n".join(sections)
+
+    def _inject_personalization(
+        self,
+        *,
+        messages: tuple[AIMessage, ...],
+        user_message: str,
+        user_profile: UserProfile | None,
+        conversation: ConversationContext,
+    ) -> tuple[AIMessage, ...]:
+        """Insert personalization instructions into the AI request."""
+        if user_profile is None:
+            return messages
+
+        personalization_context = self._build_personalization_context(
+            user_message=user_message,
+            user_profile=user_profile,
+            messages=messages,
+            conversation=conversation,
+        )
+
+        if not personalization_context:
+            return messages
+
+        personalization_message = AIMessage(
+            role=MessageRole.SYSTEM,
+            content=personalization_context,
+        )
+
+        insertion_index = next(
+            (
+                index
+                for index, item in enumerate(messages)
+                if item.role is not MessageRole.SYSTEM
+            ),
+            len(messages),
+        )
+
+        return (
+            *messages[:insertion_index],
+            personalization_message,
+            *messages[insertion_index:],
+        )
 
     async def _persist_exchange(
         self,
@@ -185,6 +331,7 @@ class AIResponsePipeline:
         message_service: MessageService | None = None,
         conversation_id: str | None = None,
         context_injector: ContextInjector | None = None,
+        user_profile: UserProfile | None = None,
     ) -> GenerationResponse:
         """Generate an AI response and optionally persist the exchange."""
         if not isinstance(message, str) or not message.strip():
@@ -192,6 +339,7 @@ class AIResponsePipeline:
 
         self._validate_persistence(message_service, conversation_id)
         self._validate_context_injector(context_injector)
+        self._validate_profile(user_profile)
 
         context = self._get_context(conversation_id)
 
@@ -200,12 +348,21 @@ class AIResponsePipeline:
             content=message.strip(),
         )
 
+        messages = await self._build_messages(
+            message=user_message,
+            context=context,
+            context_injector=context_injector,
+        )
+
+        messages = self._inject_personalization(
+            messages=messages,
+            user_message=user_message.content,
+            user_profile=user_profile,
+            conversation=context,
+        )
+
         request = self._request_factory.build(
-            messages=await self._build_messages(
-                message=user_message,
-                context=context,
-                context_injector=context_injector,
-            ),
+            messages=messages,
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
@@ -235,6 +392,7 @@ class AIResponsePipeline:
         message_service: MessageService | None = None,
         conversation_id: str | None = None,
         context_injector: ContextInjector | None = None,
+        user_profile: UserProfile | None = None,
     ) -> AsyncIterator[str]:
         """Stream an AI response and optionally persist the exchange."""
         if not isinstance(message, str) or not message.strip():
@@ -242,6 +400,7 @@ class AIResponsePipeline:
 
         self._validate_persistence(message_service, conversation_id)
         self._validate_context_injector(context_injector)
+        self._validate_profile(user_profile)
 
         context = self._get_context(conversation_id)
 
@@ -250,12 +409,21 @@ class AIResponsePipeline:
             content=message.strip(),
         )
 
+        messages = await self._build_messages(
+            message=user_message,
+            context=context,
+            context_injector=context_injector,
+        )
+
+        messages = self._inject_personalization(
+            messages=messages,
+            user_message=user_message.content,
+            user_profile=user_profile,
+            conversation=context,
+        )
+
         request = self._request_factory.build(
-            messages=await self._build_messages(
-                message=user_message,
-                context=context,
-                context_injector=context_injector,
-            ),
+            messages=messages,
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
