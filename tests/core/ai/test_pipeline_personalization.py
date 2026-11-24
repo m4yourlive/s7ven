@@ -15,9 +15,6 @@ from seven.core.ai.prompts import DEFAULT_PROMPTS, PromptManager
 from seven.core.ai.providers.openai_provider import OpenAIProvider
 from seven.core.ai.request_factory import GenerationRequestFactory
 from seven.core.config.config_schema import AIConfig
-from seven.core.conversations.personalization_contracts import (
-    PersonalizationCategory,
-)
 from seven.core.conversations.user_profile_contracts import (
     UserPreference,
     UserProfile,

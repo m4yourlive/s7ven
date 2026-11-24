@@ -1,8 +1,8 @@
+
 """Data models for the S7VEN AI engine."""
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-
 
 class MessageRole(StrEnum):
     """Supported conversation message roles."""
@@ -11,6 +11,33 @@ class MessageRole(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
 
+@dataclass(frozen=True, slots=True)
+class ProviderCapabilities:
+    """Describe the generation features supported by a provider."""
+
+    supports_streaming: bool = True
+    supports_system_messages: bool = True
+    supports_temperature: bool = True
+    supports_max_tokens: bool = True
+    supports_top_p: bool = True
+    supports_frequency_penalty: bool = True
+    supports_presence_penalty: bool = True
+
+    def __post_init__(self) -> None:
+        """Validate provider capability flags."""
+        for field_name in (
+            "supports_streaming",
+            "supports_system_messages",
+            "supports_temperature",
+            "supports_max_tokens",
+            "supports_top_p",
+            "supports_frequency_penalty",
+            "supports_presence_penalty",
+        ):
+            if not isinstance(getattr(self, field_name), bool):
+                raise TypeError(
+                    f"{field_name} must be a boolean."
+                )
 
 @dataclass(frozen=True, slots=True)
 class AIMessage:
@@ -29,8 +56,6 @@ class AIMessage:
         if not self.content.strip():
             raise ValueError("Message content cannot be empty.")
 
-
-
 @dataclass(frozen=True, slots=True)
 class GenerationRequest:
     """Input parameters for an AI generation request."""
@@ -41,7 +66,6 @@ class GenerationRequest:
     max_tokens: int | None = None
     metadata: dict[str, str] = field(default_factory=dict)
 
-    # Advanced generation parameters
     top_p: float = 1.0
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
@@ -81,7 +105,6 @@ class GenerationRequest:
                 "presence_penalty must be between -2.0 and 2.0."
             )
 
-
 @dataclass(frozen=True, slots=True)
 class GenerationResponse:
     """Output returned by an AI provider."""
@@ -96,8 +119,8 @@ class GenerationResponse:
         if not isinstance(self.content, str):
             raise TypeError("Response content must be a string.")
 
-        if not self.model.strip():
+        if not isinstance(self.model, str) or not self.model.strip():
             raise ValueError("Response model cannot be empty.")
 
-        if not self.provider.strip():
+        if not isinstance(self.provider, str) or not self.provider.strip():
             raise ValueError("Provider name cannot be empty.")

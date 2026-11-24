@@ -1,6 +1,7 @@
 
 """Integration tests for the AI response pipeline."""
 
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -8,7 +9,7 @@ import pytest
 
 from seven.core.ai.context_manager import ConversationContext
 from seven.core.ai.engine import AIEngine
-from seven.core.ai.exceptions import AIRequestError
+from seven.core.ai.exceptions import AIGenerationError, AIRequestError
 from seven.core.ai.models import GenerationResponse, MessageRole
 from seven.core.ai.pipeline import AIResponsePipeline
 from seven.core.ai.prompts import DEFAULT_PROMPTS, PromptManager
@@ -18,7 +19,6 @@ from seven.core.config.config_schema import AIConfig
 from seven.core.conversations.context_injector import ContextInjector
 from seven.core.conversations.memory_retriever import MemoryRetriever
 from seven.core.conversations.memory_service import MemoryService
-from datetime import datetime, timezone
 
 
 @pytest.fixture
@@ -57,7 +57,7 @@ def memory_context_injector():
                 content="S7VEN is a personal AI assistant.",
                 category="project",
                 importance=1.0,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
         ]
     )
@@ -70,6 +70,7 @@ def memory_context_injector():
     )
 
     return injector, memory_service._repository.search
+
 
 @pytest.mark.asyncio
 async def test_pipeline_generate(pipeline_components):
@@ -336,3 +337,92 @@ def test_context_preserves_system_prompt_when_cleared():
 
     assert context.message_count == 0
     assert context.system_prompt == "You are Seven."
+
+
+@pytest.mark.asyncio
+async def test_pipeline_stream_does_not_persist_partial_response_on_error(
+    pipeline_components,
+):
+    pipeline, provider = pipeline_components
+
+    async def failing_stream(generation_request):
+        yield "Partial "
+        raise RuntimeError("Provider stream failed.")
+
+    provider.stream = failing_stream
+
+    stream = pipeline.stream("Hello!")
+
+    assert await anext(stream) == "Partial "
+
+    with pytest.raises(
+        AIGenerationError,
+        match="streaming failed unexpectedly",
+    ):
+        await anext(stream)
+
+    assert pipeline.context.message_count == 0
+    assert pipeline.context.history == ()
+
+
+@pytest.mark.asyncio
+async def test_pipeline_stream_does_not_persist_when_cancelled(
+    pipeline_components,
+):
+    pipeline, provider = pipeline_components
+
+    async def mock_stream(generation_request):
+        yield "First "
+        yield "Second "
+        yield "Third"
+
+    provider.stream = mock_stream
+
+    stream = pipeline.stream("Hello!")
+
+    first_chunk = await anext(stream)
+
+    assert first_chunk == "First "
+
+    await stream.aclose()
+
+    assert pipeline.context.history == ()
+    assert pipeline.context.message_count == 0
+
+
+@pytest.mark.asyncio
+async def test_pipeline_recovers_after_stream_error(
+    pipeline_components,
+):
+    pipeline, provider = pipeline_components
+
+    async def failing_stream(generation_request):
+        yield "Partial "
+        raise RuntimeError("Temporary provider failure.")
+
+    provider.stream = failing_stream
+
+    stream = pipeline.stream("First message.")
+
+    assert await anext(stream) == "Partial "
+
+    with pytest.raises(AIGenerationError):
+        await anext(stream)
+
+    expected_response = GenerationResponse(
+        content="Recovered successfully.",
+        model="gpt-4o-mini",
+        provider="openai",
+    )
+
+    provider.generate = AsyncMock(return_value=expected_response)
+
+    response = await pipeline.generate("Second message.")
+
+    assert response == expected_response
+    assert pipeline.context.message_count == 2
+    assert pipeline.context.history[0].content == "Second message."
+    assert (
+        pipeline.context.history[1].content
+        == "Recovered successfully."
+    )

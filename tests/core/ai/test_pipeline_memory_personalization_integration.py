@@ -1,7 +1,7 @@
 
 """End-to-end tests for memory and personalization integration."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -63,7 +63,7 @@ def memory_context_injector():
                 ),
                 category="project",
                 importance=1.0,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
         ]
     )
