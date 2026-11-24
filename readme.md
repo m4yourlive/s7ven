@@ -2,14 +2,6 @@
 
 ## An AI-Native Personal Technology Ecosystem
 
-**Project Name:** S7VEN  
-**Project Category:** Artificial Intelligence, Personal Computing, Web3, Decentralized Finance, Financial Technology, and Smart Hardware  
-**Project Type:** Long-Term Technology Ecosystem  
-**Development Status:** Active Development  
-**Version:** 0.1.0 Alpha
-
----
-
 # 1\. Project Overview
 
 ## 1.1 What Is S7VEN?
