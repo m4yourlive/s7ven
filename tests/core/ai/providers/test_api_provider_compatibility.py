@@ -349,7 +349,7 @@ async def test_stream_preserves_original_iteration_error(
 
     mock_stream.close.assert_awaited_once()
 
-def test_native_openai_provider_keeps_default_capabilities() -> None:
+def test_native_openai_provider_enables_function_calling_by_default() -> None:
     provider = OpenAIProvider(api_key="test-api-key")
 
-    assert provider.capabilities == ProviderCapabilities()
+    assert provider.capabilities.supports_function_calling is True

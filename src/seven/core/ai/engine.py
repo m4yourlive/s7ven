@@ -21,6 +21,7 @@ from seven.core.ai.models import (
 )
 from seven.core.ai.providers import ProviderRegistry
 from seven.core.ai.retry_policy import RetryPolicy
+from seven.core.ai.streaming import AIStreamEvent
 
 
 class AIEngine:
@@ -684,6 +685,220 @@ class AIEngine:
 
             raise AIProviderUnavailableError(
                 "No available AI provider could stream the response."
+            )
+
+        finally:
+            await self._release_provider()
+
+    async def _provider_stream_events(
+        self,
+        provider: AIProvider,
+        request: GenerationRequest,
+    ) -> AsyncIterator[AIStreamEvent]:
+        """Stream structured events or adapt legacy text streaming."""
+        stream_events = getattr(provider, "stream_events", None)
+
+        if callable(stream_events):
+            async for event in stream_events(request):
+                yield event
+            return
+
+        async for chunk in provider.stream(request):
+            if not isinstance(chunk, str):
+                raise AIResponseError(
+                    f"{provider.name} returned an invalid stream chunk."
+                )
+
+            if chunk:
+                yield AIStreamEvent(content=chunk)
+
+        yield AIStreamEvent(is_final=True)
+
+    async def stream_events(
+        self,
+        request: GenerationRequest,
+    ) -> AsyncIterator[AIStreamEvent]:
+        """Stream structured content and function-call events."""
+        self._ensure_available()
+
+        if not isinstance(request, GenerationRequest):
+            raise AIRequestError(
+                "request must be a GenerationRequest instance."
+            )
+
+        primary_provider = await self._acquire_provider()
+
+        try:
+            candidates = self._get_provider_candidates(primary_provider)
+            last_error: Exception | None = None
+
+            for provider_index, provider in enumerate(candidates):
+                self._manage_provider(provider)
+                is_fallback = provider_index > 0
+
+                if is_fallback:
+                    self._logger.warning(
+                        "Activating fallback AI provider.",
+                        primary_provider=primary_provider.name,
+                        fallback_provider=provider.name,
+                        operation="stream_events",
+                    )
+
+                if self._is_provider_closed(provider):
+                    last_error = AIProviderUnavailableError(
+                        f"{provider.name} provider is closed."
+                    )
+
+                    self._logger.warning(
+                        "Skipping unavailable AI provider.",
+                        provider=provider.name,
+                        operation="stream_events",
+                        reason="provider_closed",
+                    )
+                    continue
+
+                attempt = 1
+
+                while attempt <= self._retry_policy.max_attempts:
+                    emitted_output = False
+
+                    try:
+                        async for event in self._provider_stream_events(
+                            provider,
+                            request,
+                        ):
+                            if not isinstance(event, AIStreamEvent):
+                                raise AIResponseError(
+                                    f"{provider.name} returned an invalid "
+                                    "stream event."
+                                )
+
+                            has_output = bool(
+                                event.content or event.tool_calls
+                            )
+
+                            if has_output:
+                                emitted_output = True
+                                yield event
+                            elif event.is_final:
+                                yield event
+
+                        if attempt > 1 or is_fallback:
+                            self._logger.info(
+                                "AI structured streaming recovered "
+                                "successfully.",
+                                provider=provider.name,
+                                operation="stream_events",
+                                attempt=attempt,
+                                fallback=is_fallback,
+                            )
+
+                        return
+
+                    except Exception as error:
+                        normalized_error = self._normalize_generation_error(
+                            error,
+                            provider.name,
+                            "structured streaming",
+                        )
+
+                        if normalized_error is not error:
+                            self._log_failure(
+                                provider=provider,
+                                operation="stream_events",
+                                error=normalized_error,
+                                attempt=attempt,
+                                fallback=is_fallback,
+                            )
+                            raise normalized_error from error
+
+                        last_error = normalized_error
+                        provider_closed = self._is_provider_closed(provider)
+
+                        if emitted_output:
+                            self._log_failure(
+                                provider=provider,
+                                operation="stream_events",
+                                error=normalized_error,
+                                attempt=attempt,
+                                fallback=is_fallback,
+                            )
+
+                            self._logger.error(
+                                "Structured streaming stopped after partial "
+                                "output; retry and fallback are disabled.",
+                                provider=provider.name,
+                                operation="stream_events",
+                            )
+                            raise normalized_error
+
+                        if provider_closed:
+                            self._log_failure(
+                                provider=provider,
+                                operation="stream_events",
+                                error=normalized_error,
+                                attempt=attempt,
+                                fallback=is_fallback,
+                            )
+                            break
+
+                        if not self._retry_policy.is_retryable(
+                            normalized_error
+                        ):
+                            self._log_failure(
+                                provider=provider,
+                                operation="stream_events",
+                                error=normalized_error,
+                                attempt=attempt,
+                                fallback=is_fallback,
+                            )
+                            raise normalized_error
+
+                        if attempt >= self._retry_policy.max_attempts:
+                            self._log_failure(
+                                provider=provider,
+                                operation="stream_events",
+                                error=normalized_error,
+                                attempt=attempt,
+                                fallback=is_fallback,
+                            )
+                            break
+
+                        delay = self._retry_policy.get_delay(
+                            normalized_error,
+                            attempt,
+                        )
+
+                        self._logger.warning(
+                            "Scheduling AI structured streaming retry.",
+                            provider=provider.name,
+                            operation="stream_events",
+                            attempt=attempt,
+                            next_attempt=attempt + 1,
+                            max_attempts=self._retry_policy.max_attempts,
+                            delay_seconds=delay,
+                            error_type=type(normalized_error).__name__,
+                        )
+
+                        await asyncio.sleep(delay)
+                        attempt += 1
+
+            if last_error is not None:
+                self._logger.error(
+                    "All AI structured streaming providers failed.",
+                    primary_provider=primary_provider.name,
+                    provider_count=len(candidates),
+                    error_type=type(last_error).__name__,
+                )
+                raise last_error
+
+            self._logger.error(
+                "No available AI provider could stream structured events.",
+                primary_provider=primary_provider.name,
+            )
+
+            raise AIProviderUnavailableError(
+                "No available AI provider could stream structured events."
             )
 
         finally:

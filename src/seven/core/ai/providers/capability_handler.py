@@ -51,6 +51,59 @@ class CapabilityHandler:
             )
 
     @staticmethod
+    def validate_function_calling(
+        request: GenerationRequest,
+        capabilities: ProviderCapabilities,
+        provider_name: str,
+    ) -> None:
+        """Reject function calling when the provider does not support it."""
+        if not isinstance(request, GenerationRequest):
+            raise TypeError(
+                "request must be a GenerationRequest instance."
+            )
+
+        if not isinstance(capabilities, ProviderCapabilities):
+            raise TypeError(
+                "capabilities must be a ProviderCapabilities instance."
+            )
+
+        if request.tools and not capabilities.supports_function_calling:
+            raise AIProviderCapabilityError(
+                f"{provider_name} does not support function calling."
+            )
+
+    @staticmethod
+    def build_function_calling_options(
+        request: GenerationRequest,
+        capabilities: ProviderCapabilities,
+        provider_name: str,
+    ) -> dict[str, Any]:
+        """Build OpenAI-compatible function calling options."""
+        CapabilityHandler.validate_function_calling(
+            request,
+            capabilities,
+            provider_name,
+        )
+
+        if not request.tools:
+            return {}
+
+        return {
+            "tools": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": dict(tool.parameters),
+                    },
+                }
+                for tool in request.tools
+            ],
+            "tool_choice": request.tool_choice.value,
+        }
+
+    @staticmethod
     def build_generation_options(
         request: GenerationRequest,
         capabilities: ProviderCapabilities,
