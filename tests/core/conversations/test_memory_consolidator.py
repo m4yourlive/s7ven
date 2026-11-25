@@ -6,12 +6,19 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from seven.core.conversations.memory_conflict_detector import (
+    MemoryConflict,
+    MemoryConflictType,
+)
 from seven.core.conversations.memory_consolidator import (
+    MemoryConsolidationAction,
+    MemoryConsolidationItem,
+    MemoryConsolidationResult,
     MemoryConsolidator,
 )
-
 from seven.core.conversations.memory_service import MemoryService
 from seven.core.conversations.message_service import MessageService
+
 
 @pytest.fixture
 def services():
@@ -31,6 +38,23 @@ def consolidator(services):
         message_service=message_service,
         memory_service=memory_service,
     )
+
+
+@pytest.fixture
+def candidate(consolidator):
+    """Create a representative memory candidate."""
+    return consolidator.extract_candidates(
+        [
+            SimpleNamespace(
+                role="user",
+                content=(
+                    "I am building a personal AI assistant "
+                    "called S7VEN."
+                ),
+            ),
+        ]
+    )[0]
+
 
 def test_extracts_user_memory_candidates(consolidator):
     messages = [
@@ -250,3 +274,199 @@ async def test_consolidate_returns_empty_when_no_candidates(
     assert result == []
     memory_service.search.assert_not_awaited()
     memory_service.create.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_detailed_consolidation_reports_created_memories(
+    consolidator,
+    services,
+):
+    message_service, memory_service = services
+
+    message_service.get_messages.return_value = [
+        SimpleNamespace(
+            role="user",
+            content="I am building a personal AI assistant called S7VEN.",
+        ),
+    ]
+
+    created_memory = SimpleNamespace(
+        id="memory-1",
+        content="I am building a personal AI assistant called S7VEN.",
+        category="project",
+        importance=0.85,
+    )
+
+    memory_service.search.return_value = []
+    memory_service.create.return_value = created_memory
+
+    result = await consolidator.consolidate_detailed("conversation-1")
+
+    assert isinstance(result, MemoryConsolidationResult)
+    assert len(result.items) == 1
+    assert result.items[0].action == MemoryConsolidationAction.CREATE
+    assert result.items[0].memory is created_memory
+    assert result.created == 1
+    assert result.reinforced == 0
+    assert result.updated == 0
+    assert result.kept == 0
+    assert result.needs_review == 0
+
+
+@pytest.mark.asyncio
+async def test_detailed_consolidation_reports_existing_memory_as_kept(
+    consolidator,
+    services,
+):
+    message_service, memory_service = services
+
+    content = "I am building a personal AI assistant called S7VEN."
+    existing_memory = SimpleNamespace(content=content)
+
+    message_service.get_messages.return_value = [
+        SimpleNamespace(role="user", content=content),
+    ]
+    memory_service.search.return_value = [existing_memory]
+
+    result = await consolidator.consolidate_detailed("conversation-1")
+
+    assert len(result.items) == 1
+    assert result.items[0].action == MemoryConsolidationAction.KEEP
+    assert result.items[0].memory is existing_memory
+    assert result.kept == 1
+    memory_service.create.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_detailed_consolidation_routes_exact_matches_to_reinforcement(
+    consolidator,
+    services,
+    monkeypatch,
+    candidate,
+):
+    message_service, memory_service = services
+
+    existing_memory = SimpleNamespace(
+        id="memory-1",
+        content=candidate.content,
+    )
+
+    message_service.get_messages.return_value = [
+        SimpleNamespace(role="user", content=candidate.content),
+    ]
+    memory_service.search.return_value = [existing_memory]
+
+    reinforced_item = MemoryConsolidationItem(
+        candidate=candidate,
+        action=MemoryConsolidationAction.REINFORCE,
+        memory=existing_memory,
+    )
+
+    reinforce = AsyncMock(return_value=reinforced_item)
+    monkeypatch.setattr(consolidator, "_reinforce", reinforce)
+
+    result = await consolidator.consolidate_detailed("conversation-1")
+
+    assert len(result.items) == 1
+    assert result.items[0].action == MemoryConsolidationAction.REINFORCE
+    assert result.reinforced == 1
+
+    reinforce.assert_awaited_once_with(
+        candidate,
+        existing_memory,
+    )
+
+
+@pytest.mark.asyncio
+async def test_detailed_consolidation_marks_possible_conflicts_for_review(
+    consolidator,
+    services,
+    monkeypatch,
+    candidate,
+):
+    message_service, memory_service = services
+
+    existing_memory = SimpleNamespace(
+        id="memory-2",
+        content="I prefer a different personal assistant project.",
+    )
+
+    conflict = MemoryConflict(
+        conflict_type=MemoryConflictType.POSSIBLE_CONFLICT,
+        is_conflict=True,
+        shared_terms=("personal", "assistant"),
+        reason="The memories may describe conflicting information.",
+    )
+
+    message_service.get_messages.return_value = [
+        SimpleNamespace(role="user", content=candidate.content),
+    ]
+    memory_service.search.return_value = [existing_memory]
+
+    monkeypatch.setattr(
+        consolidator.conflict_detector,
+        "detect",
+        lambda existing, incoming: conflict,
+    )
+
+    result = await consolidator.consolidate_detailed("conversation-1")
+
+    assert len(result.items) == 1
+    assert result.items[0].action == MemoryConsolidationAction.REVIEW
+    assert result.items[0].memory is existing_memory
+    assert result.items[0].conflict is conflict
+    assert result.needs_review == 1
+
+    memory_service.create.assert_not_awaited()
+
+
+def test_consolidation_result_counts_all_actions(candidate):
+    actions = (
+        MemoryConsolidationAction.CREATE,
+        MemoryConsolidationAction.REINFORCE,
+        MemoryConsolidationAction.UPDATE,
+        MemoryConsolidationAction.KEEP,
+        MemoryConsolidationAction.REVIEW,
+    )
+
+    result = MemoryConsolidationResult(
+        items=tuple(
+            MemoryConsolidationItem(
+                candidate=candidate,
+                action=action,
+            )
+            for action in actions
+        )
+    )
+
+    assert result.created == 1
+    assert result.reinforced == 1
+    assert result.updated == 1
+    assert result.kept == 1
+    assert result.needs_review == 1
+
+
+@pytest.mark.asyncio
+async def test_detailed_consolidation_rejects_empty_conversation_id(
+    consolidator,
+    services,
+):
+    message_service, _ = services
+
+    with pytest.raises(ValueError, match="cannot be empty"):
+        await consolidator.consolidate_detailed("   ")
+
+    message_service.get_messages.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_detailed_consolidation_rejects_non_string_conversation_id(
+    consolidator,
+    services,
+):
+    message_service, _ = services
+
+    with pytest.raises(TypeError, match="must be a string"):
+        await consolidator.consolidate_detailed(123)
+
+    message_service.get_messages.assert_not_awaited()

@@ -1,4 +1,5 @@
-"""Factory for building AI generation requests from configuration."""
+
+"""Factory for building AI generation requests from configuration and prompts."""
 
 from seven.core.ai.models import (
     AIMessage,
@@ -10,7 +11,7 @@ from seven.core.config.config_schema import AIConfig
 
 
 class GenerationRequestFactory:
-    """Build generation requests using configuration and prompts."""
+    """Build generation requests with the configured system prompt."""
 
     def __init__(
         self,
@@ -28,6 +29,18 @@ class GenerationRequestFactory:
         self._config = config
         self._prompt_manager = prompt_manager
 
+    @property
+    def config(self) -> AIConfig:
+        """Return the currently active AI configuration."""
+        return self._config
+
+    def update_config(self, config: AIConfig) -> None:
+        """Replace the active AI configuration."""
+        if not isinstance(config, AIConfig):
+            raise TypeError("config must be an AIConfig instance.")
+
+        self._config = config
+
     def build(
         self,
         messages: tuple[AIMessage, ...],
@@ -37,7 +50,15 @@ class GenerationRequestFactory:
         max_tokens: int | None = None,
         metadata: dict[str, str] | None = None,
     ) -> GenerationRequest:
-        """Build a request with the default S7VEN system prompt."""
+        """Build a generation request using the active AI configuration."""
+
+        default_model = (
+            self._config.local_model
+            if self._config.mode == "local"
+            else self._config.model
+        )
+
+        selected_model = default_model if model is None else model
 
         system_message = AIMessage(
             role=MessageRole.SYSTEM,
@@ -48,7 +69,7 @@ class GenerationRequestFactory:
 
         return GenerationRequest(
             messages=request_messages,
-            model=model or self._config.model,
+            model=selected_model,
             temperature=(
                 self._config.temperature
                 if temperature is None
@@ -59,7 +80,7 @@ class GenerationRequestFactory:
                 if max_tokens is None
                 else max_tokens
             ),
-            metadata=metadata or {},
+            metadata={} if metadata is None else metadata,
             top_p=self._config.top_p,
             frequency_penalty=self._config.frequency_penalty,
             presence_penalty=self._config.presence_penalty,

@@ -191,3 +191,73 @@ def test_voice_pipeline_is_singleton() -> None:
     second = container.voice_pipeline()
 
     assert first is second
+
+def test_shutdown_container_does_not_require_singleton_is_initialized() -> None:
+    from unittest.mock import AsyncMock, MagicMock
+
+    from dependency_injector import providers
+
+    from seven.core.di.container import shutdown_container
+
+    engine = MagicMock()
+    engine.is_closed = False
+    engine.close = AsyncMock()
+
+    voice_pipeline = MagicMock()
+    voice_pipeline.close = AsyncMock()
+
+    database_manager = MagicMock()
+    database_manager.dispose = AsyncMock()
+
+    runtime_manager = MagicMock()
+
+    container = MagicMock()
+    container.ai_engine = providers.Object(engine)
+    container.voice_pipeline = providers.Object(voice_pipeline)
+    container.database_session_manager = providers.Object(database_manager)
+    container.runtime_manager.return_value = runtime_manager
+
+    shutdown_container(container)
+
+    engine.close.assert_awaited_once()
+    voice_pipeline.close.assert_awaited_once()
+    database_manager.dispose.assert_awaited_once()
+    runtime_manager.stop.assert_called_once()
+
+
+def test_shutdown_container_continues_after_cleanup_failure() -> None:
+    from unittest.mock import AsyncMock, MagicMock
+
+    import pytest
+    from dependency_injector import providers
+
+    from seven.core.di.container import shutdown_container
+
+    voice_pipeline = MagicMock()
+    voice_pipeline.close = AsyncMock(
+        side_effect=RuntimeError("Voice shutdown failed")
+    )
+
+    engine = MagicMock()
+    engine.close = AsyncMock()
+
+    database_manager = MagicMock()
+    database_manager.dispose = AsyncMock()
+
+    runtime_manager = MagicMock()
+
+    container = MagicMock()
+    container.voice_pipeline = providers.Object(voice_pipeline)
+    container.ai_engine = providers.Object(engine)
+    container.database_session_manager = providers.Object(
+        database_manager
+    )
+    container.runtime_manager.return_value = runtime_manager
+
+    with pytest.raises(RuntimeError, match="Voice shutdown failed"):
+        shutdown_container(container)
+
+    voice_pipeline.close.assert_awaited_once()
+    engine.close.assert_awaited_once()
+    database_manager.dispose.assert_awaited_once()
+    runtime_manager.stop.assert_called_once()

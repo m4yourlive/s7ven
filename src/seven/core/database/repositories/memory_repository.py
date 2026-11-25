@@ -1,6 +1,9 @@
+
 """Memory repository."""
 
-from sqlalchemy import select
+import re
+
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from seven.core.database.models import Memory
@@ -9,6 +12,8 @@ from seven.core.database.repositories.base_repository import BaseRepository
 
 class MemoryRepository(BaseRepository[Memory]):
     """Provide database operations for long-term memories."""
+
+    _SEARCH_TOKEN_PATTERN = re.compile(r"\w+", re.UNICODE)
 
     def __init__(self, session: AsyncSession) -> None:
         """Initialize the memory repository."""
@@ -87,23 +92,47 @@ class MemoryRepository(BaseRepository[Memory]):
 
         return list(result.scalars().all())
 
+    @classmethod
+    def _extract_search_terms(cls, query: str) -> list[str]:
+        """Extract unique searchable terms from a query."""
+        terms = cls._SEARCH_TOKEN_PATTERN.findall(query.casefold())
+
+        return list(dict.fromkeys(terms))
+
     async def search(
         self,
         query: str,
         *,
         limit: int = 20,
     ) -> list[Memory]:
-        """Search memories by content using a case-insensitive match."""
-        if not query.strip():
+        """Search memories using individual query terms."""
+        if not isinstance(query, str) or not query.strip():
             raise ValueError("Search query cannot be empty.")
 
-        if limit < 1:
+        if (
+            isinstance(limit, bool)
+            or not isinstance(limit, int)
+            or limit < 1
+        ):
             raise ValueError("Limit must be greater than zero.")
+
+        search_terms = self._extract_search_terms(query)
+
+        if not search_terms:
+            search_terms = [query.strip()]
+
+        conditions = [
+            Memory.content.ilike(f"%{term}%")
+            for term in search_terms
+        ]
 
         statement = (
             select(Memory)
-            .where(Memory.content.ilike(f"%{query.strip()}%"))
-            .order_by(Memory.importance.desc(), Memory.created_at.desc())
+            .where(or_(*conditions))
+            .order_by(
+                Memory.importance.desc(),
+                Memory.created_at.desc(),
+            )
             .limit(limit)
         )
 

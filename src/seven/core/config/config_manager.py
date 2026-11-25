@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import os
 from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 import yaml
 from dotenv import load_dotenv
@@ -19,16 +20,16 @@ from seven.core.config.exceptions import (
 T = TypeVar("T", bound=BaseModel)
 
 
-class ConfigurationManager:
-    """
-    Centralized configuration manager for Seven.
+@dataclass(frozen=True)
+class ConfigurationCandidate(Generic[T]):
+    """Validated configuration that has not yet been activated."""
 
-    Source priority:
-        1. Pydantic schema defaults
-        2. YAML configuration
-        3. .env file
-        4. System environment variables
-    """
+    config: T
+    raw_config: dict[str, Any]
+
+
+class ConfigurationManager:
+    """Centralized configuration manager for Seven."""
 
     def __init__(
         self,
@@ -38,7 +39,6 @@ class ConfigurationManager:
         env_nested_delimiter: str = "__",
         dotenv_path: str | Path | None = None,
     ) -> None:
-
         self.config_path = Path(config_path)
         self.schema = schema
         self.env_prefix = env_prefix
@@ -64,9 +64,8 @@ class ConfigurationManager:
 
         return self._config
 
-    def load(self) -> T:
-        """Load, merge, and validate configuration."""
-
+    def prepare_reload(self) -> ConfigurationCandidate[T]:
+        """Load and validate a candidate without activating it."""
         yaml_data = self._load_yaml()
 
         if self.dotenv_path and self.dotenv_path.exists():
@@ -76,39 +75,55 @@ class ConfigurationManager:
             )
 
         env_data = self._load_environment()
-
         merged_data = self._deep_merge(yaml_data, env_data)
 
         try:
             validated = self.schema.model_validate(merged_data)
-
         except ValidationError as exc:
             raise ConfigurationValidationError(
                 f"Invalid configuration: {exc}"
             ) from exc
 
-        self._raw_config = merged_data
-        self._config = validated
+        return ConfigurationCandidate(
+            config=validated,
+            raw_config=merged_data,
+        )
 
-        return validated
+    def commit_candidate(
+        self,
+        candidate: ConfigurationCandidate[T],
+    ) -> T:
+        """Activate a previously validated configuration candidate."""
+        if not isinstance(candidate, ConfigurationCandidate):
+            raise TypeError(
+                "candidate must be a ConfigurationCandidate instance."
+            )
+
+        if not isinstance(candidate.config, self.schema):
+            raise TypeError(
+                "Candidate configuration does not match the schema."
+            )
+
+        self._raw_config = deepcopy(candidate.raw_config)
+        self._config = candidate.config
+
+        return self._config
+
+    def load(self) -> T:
+        """Load and activate configuration."""
+        candidate = self.prepare_reload()
+        return self.commit_candidate(candidate)
 
     def reload(self) -> T:
-        """Reload configuration from all sources."""
-
-        self._config = None
-        self._raw_config = {}
-
+        """Reload configuration without discarding the active version."""
         return self.load()
 
-    def get(self, key: str, default: Any = None) -> Any:
-        """
-        Get a configuration value using dot notation.
-
-        Example:
-            get("ai.provider")
-            get("runtime.debug")
-        """
-
+    def get(
+        self,
+        key: str,
+        default: Any = None,
+    ) -> Any:
+        """Get a configuration value using dot notation."""
         current: Any = self.config
 
         for part in key.split("."):
@@ -130,15 +145,12 @@ class ConfigurationManager:
         return current
 
     def as_dict(self) -> dict[str, Any]:
-        """Return a copy of validated configuration."""
-
         return self.config.model_dump(mode="python")
 
     def _load_yaml(self) -> dict[str, Any]:
         if not self.config_path.exists():
             raise ConfigurationFileNotFoundError(
-                f"Configuration file not found: "
-                f"{self.config_path}"
+                f"Configuration file not found: {self.config_path}"
             )
 
         try:

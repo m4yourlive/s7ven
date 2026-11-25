@@ -12,7 +12,7 @@ from seven.core.database import DatabaseConfig
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 ALEMBIC_CONFIG_PATH = PROJECT_ROOT / "alembic.ini"
-EXPECTED_MIGRATION_REVISION = "f9c7d82df6b4"
+EXPECTED_MIGRATION_REVISION = "c2a7e91f4b30"
 
 
 @pytest.fixture
