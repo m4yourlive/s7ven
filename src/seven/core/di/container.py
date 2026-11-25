@@ -38,6 +38,7 @@ from seven.core.database.repositories import (
 )
 
 from seven.core.events import EventBus
+from seven.core.integrations import IntegrationServiceManager
 from seven.core.logging import LoggerConfig, LoggerService
 from seven.core.runtime import RuntimeManager
 from seven.core.settings.settings_manager import SettingsManager
@@ -51,6 +52,8 @@ from seven.core.voice.providers.openai_provider import OpenAIVoiceProvider
 from seven.core.ai.configuration_coordinator import (
     AIConfigurationCoordinator,
 )
+
+from seven.core.integrations.system import SystemInformationService
 
 def create_logger_config(
     config_manager: ConfigurationManager,
@@ -431,6 +434,18 @@ class SevenContainer(containers.DeclarativeContainer):
         ai_pipeline=ai_pipeline,
     )
 
+    # System Integrations
+    system_information_service = providers.Singleton(
+        SystemInformationService,
+    )
+
+    integration_service_manager = providers.Singleton(
+        IntegrationServiceManager,
+        services=providers.List(
+            system_information_service,
+        ),
+    )
+
     # Runtime
     runtime_manager = providers.Singleton(
         RuntimeManager,
@@ -441,8 +456,10 @@ class SevenContainer(containers.DeclarativeContainer):
         event_bus_provider=providers.Delegate(
             event_bus
         ),
+        integration_manager_provider=providers.Delegate(
+            integration_service_manager
+        ),
     )
-
 
 def initialize_container(container: SevenContainer) -> None:
     """Start Seven through Runtime Manager."""
